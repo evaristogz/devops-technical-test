@@ -1,0 +1,194 @@
+name: Azure E-commerce CI/CD Pipeline
+
+on:
+  # TODO: Configure triggers
+  # - Push to main and develop branches
+  # - Pull requests to main
+  # - Manual workflow dispatch with environment selection
+  
+  # push:
+  #   branches: [main, develop]
+  #   paths-ignore:
+  #     - 'docs/**'
+  #     - '*.md'
+  # pull_request:
+  #   branches: [main]
+  # workflow_dispatch:
+  #   inputs:
+  #     environment:
+  #       description: 'Target environment'
+  #       required: true
+  #       default: 'dev'
+  #       type: choice
+  #       options:
+  #       - dev
+  #       - staging  
+  #       - prod
+
+env:
+  # TODO: Configure environment variables
+  # AZURE_CONTAINER_REGISTRY: myacr.azurecr.io
+  # AKS_CLUSTER_NAME: aks-ecommerce-prod
+  # AKS_RESOURCE_GROUP: rg-ecommerce-prod
+  # HELM_CHART_PATH: ./helm-chart
+
+# TODO: Configure permissions for OIDC
+permissions:
+  # id-token: write
+  # contents: read
+  # security-events: write
+  # pull-requests: write
+
+jobs:
+  # TODO: Job 1 - Infrastructure Validation
+  validate-infrastructure:
+    # runs-on: ubuntu-latest
+    # name: Validate Terraform Infrastructure
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Setup Terraform
+      # - Azure login with OIDC  
+      # - Terraform init, validate, and plan
+      # - Security scan with tfsec
+      # - Comment on PR with plan results
+      
+  # TODO: Job 2 - Build and Test
+  build-and-test:
+    # runs-on: ubuntu-latest
+    # name: Build Application and Run Tests
+    # needs: validate-infrastructure
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Setup Node.js
+      # - Install dependencies  
+      # - Run linting
+      # - Run unit tests with coverage
+      # - SonarCloud analysis (optional)
+      
+  # TODO: Job 3 - Build and Push Docker Images  
+  build-images:
+    # runs-on: ubuntu-latest
+    # name: Build and Push Docker Images
+    # needs: build-and-test
+    # outputs:
+    #   frontend-digest: ${{ steps.build-frontend.outputs.digest }}
+    #   backend-digest: ${{ steps.build-backend.outputs.digest }}
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Azure login with OIDC
+      # - Login to ACR
+      # - Setup Docker Buildx
+      # - Build and push frontend image
+      # - Build and push backend image
+      # - Generate image metadata
+      
+  # TODO: Job 4 - Security Scanning
+  security-scan:
+    # runs-on: ubuntu-latest
+    # name: Security Scanning
+    # needs: build-images
+    steps:
+      # TODO: Implement steps:
+      # - Trivy container scanning
+      # - Microsoft Defender for Containers
+      # - Upload SARIF results
+      # - Fail on high/critical vulnerabilities
+      
+  # TODO: Job 5 - Validate Kubernetes Manifests
+  validate-k8s:
+    # runs-on: ubuntu-latest  
+    # name: Validate Kubernetes Manifests
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Validate YAML syntax with kubeval
+      # - Security analysis with kube-score
+      # - Policy validation with Conftest/OPA
+      
+  # TODO: Job 6 - Validate Helm Chart
+  validate-helm:
+    # runs-on: ubuntu-latest
+    # name: Validate Helm Chart
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Setup Helm
+      # - Helm dependency update
+      # - Helm lint
+      # - Helm template dry-run
+      # - Test with different values files
+      
+  # TODO: Job 7 - Deploy to Development
+  deploy-dev:
+    # runs-on: ubuntu-latest
+    # name: Deploy to Development Environment
+    # needs: [security-scan, validate-k8s, validate-helm]
+    # if: github.ref == 'refs/heads/develop'
+    # environment: development
+    steps:
+      # TODO: Implement steps:
+      # - Checkout code
+      # - Azure login with OIDC
+      # - Get AKS credentials
+      # - Setup Helm
+      # - Deploy with Helm (dev values)
+      # - Run smoke tests
+      # - Update deployment status
+      
+  # TODO: Job 8 - Deploy to Staging  
+  deploy-staging:
+    # runs-on: ubuntu-latest
+    # name: Deploy to Staging Environment
+    # needs: [security-scan, validate-k8s, validate-helm]
+    # if: github.ref == 'refs/heads/main'
+    # environment: staging
+    steps:
+      # TODO: Implement steps:
+      # - Similar to dev deployment but with staging values
+      # - More comprehensive testing
+      # - Performance testing (optional)
+      
+  # TODO: Job 9 - Deploy to Production (Blue-Green)
+  deploy-prod:
+    # runs-on: ubuntu-latest  
+    # name: Deploy to Production Environment
+    # needs: deploy-staging
+    # if: github.ref == 'refs/heads/main'
+    # environment: production
+    steps:
+      # TODO: Implement steps:
+      # - Blue-green deployment strategy
+      # - Health checks and validation
+      # - Traffic switching
+      # - Rollback on failure
+      # - Notification to teams
+      
+  # TODO: Job 10 - Integration Tests
+  integration-tests:
+    # runs-on: ubuntu-latest
+    # name: Run Integration Tests  
+    # needs: deploy-dev
+    # if: github.ref == 'refs/heads/develop'
+    steps:
+      # TODO: Implement steps:
+      # - Run API integration tests
+      # - Frontend E2E tests with Playwright/Cypress
+      # - Database connectivity tests
+      # - Generate test reports
+      
+  # TODO: Job 11 - Notification
+  notify:
+    # runs-on: ubuntu-latest
+    # name: Send Notifications
+    # needs: [deploy-dev, deploy-staging, deploy-prod]
+    # if: always()
+    steps:
+      # TODO: Implement steps:
+      # - Teams/Slack notification
+      # - Email notification on failure
+      # - Update GitHub deployment status
+      
+# TODO: Add reusable workflows or composite actions for common steps

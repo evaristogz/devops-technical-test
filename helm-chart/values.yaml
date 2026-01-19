@@ -1,0 +1,223 @@
+# Default values for ecommerce-app Helm chart
+
+# TODO: Configure global settings
+global:
+  # Azure-specific configuration
+  azure:
+    # tenantId: ""
+    # subscriptionId: ""
+    # resourceGroup: ""
+    # keyVaultName: ""
+  
+  # Image registry configuration  
+  imageRegistry: # TODO: Set your ACR registry URL
+  # imagePullSecrets: []
+
+# TODO: Configure images
+images:
+  frontend:
+    repository: # TODO: Set frontend image repository
+    tag: # TODO: Set image tag (use "latest" for now)
+    pullPolicy: IfNotPresent
+    
+  backend:
+    repository: # TODO: Set backend image repository  
+    tag: # TODO: Set image tag
+    pullPolicy: IfNotPresent
+
+# TODO: Configure frontend deployment
+frontend:
+  enabled: true
+  replicaCount: 3
+  
+  # TODO: Configure service
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+    
+  # TODO: Configure resources
+  resources:
+    requests:
+      # TODO: Set CPU and memory requests
+    limits:
+      # TODO: Set CPU and memory limits
+      
+  # TODO: Configure health checks  
+  livenessProbe:
+    # TODO: Configure liveness probe
+  readinessProbe:  
+    # TODO: Configure readiness probe
+  startupProbe:
+    # TODO: Configure startup probe
+    
+  # TODO: Configure environment variables
+  env: {}
+    # REACT_APP_API_URL: ""
+    # REACT_APP_ENVIRONMENT: ""
+    
+  # TODO: Configure autoscaling
+  autoscaling:
+    enabled: true
+    # minReplicas: 3
+    # maxReplicas: 10
+    # targetCPUUtilizationPercentage: 70
+
+# TODO: Configure backend deployment  
+backend:
+  enabled: true
+  replicaCount: 2
+  
+  # TODO: Configure service
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+    
+  # TODO: Configure resources
+  resources:
+    requests:
+      # TODO: Set CPU and memory requests
+    limits:
+      # TODO: Set CPU and memory limits
+      
+  # TODO: Configure health checks
+  livenessProbe:
+    # TODO: Configure liveness probe
+  readinessProbe:
+    # TODO: Configure readiness probe  
+  startupProbe:
+    # TODO: Configure startup probe
+    
+  # TODO: Configure environment variables
+  env: {}
+    # DATABASE_URL: ""
+    # REDIS_URL: ""  
+    # NODE_ENV: ""
+    
+  # TODO: Configure autoscaling
+  autoscaling:
+    enabled: true
+    # minReplicas: 2
+    # maxReplicas: 5
+    # targetCPUUtilizationPercentage: 70
+
+# TODO: Configure Redis
+redis:
+  enabled: true
+  
+  # TODO: Configure Redis StatefulSet
+  image:
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+    
+  # TODO: Configure service
+  service:
+    type: ClusterIP  
+    port: 6379
+    
+  # TODO: Configure persistence
+  persistence:
+    enabled: true
+    # storageClass: "managed-premium"
+    # size: 1Gi
+    
+  # TODO: Configure resources
+  resources:
+    requests:
+      # TODO: Set CPU and memory requests
+    limits:
+      # TODO: Set CPU and memory limits
+
+# TODO: Configure ingress
+ingress:
+  enabled: true
+  # className: "azure-application-gateway"
+  
+  # TODO: Configure annotations for Application Gateway
+  annotations: {}
+    # appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    # appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    
+  # TODO: Configure hosts and paths
+  hosts: []
+    # - host: ecommerce.example.com
+    #   paths:
+    #     - path: /
+    #       pathType: Prefix
+    #       service:
+    #         name: frontend
+    #         port: 80
+    #     - path: /api
+    #       pathType: Prefix  
+    #       service:
+    #         name: backend
+    #         port: 80
+            
+  # TODO: Configure TLS
+  tls: []
+    # - secretName: ecommerce-tls
+    #   hosts:
+    #     - ecommerce.example.com
+
+# TODO: Configure Azure Key Vault integration
+azureKeyVault:
+  enabled: true
+  # secretProviderClassName: "azure-keyvault-secrets"
+  # keyVaultName: ""
+  # secrets: []
+    # - secretName: "database-password"
+    #   keyVaultKey: "db-password"
+    # - secretName: "app-secret-key"
+    #   keyVaultKey: "app-secret"
+
+# TODO: Configure database connection
+database:
+  # host: ""
+  # port: 5432
+  # name: "ecommerce_db"
+  # username: "pgadmin"
+  # passwordSecretKey: "database-password"
+
+# TODO: Configure monitoring
+monitoring:
+  enabled: true
+  # applicationInsights:
+  #   connectionString: ""
+  # serviceMonitor:
+  #   enabled: true
+  #   interval: 30s
+
+# TODO: Configure security contexts
+securityContext:
+  # runAsNonRoot: true
+  # runAsUser: 1001
+  # fsGroup: 1001
+  # readOnlyRootFilesystem: true
+  
+podSecurityContext:
+  # fsGroup: 1001
+  # runAsNonRoot: true
+  # runAsUser: 1001
+
+# TODO: Configure network policies
+networkPolicies:
+  enabled: true
+
+# TODO: Configure pod disruption budgets
+podDisruptionBudget:
+  enabled: true
+  # maxUnavailable: 1
+
+# TODO: Configure service accounts
+serviceAccount:
+  create: true
+  # name: ""
+  annotations: {}
+    # azure.workload.identity/client-id: ""
+
+# TODO: Configure node selectors and tolerations  
+nodeSelector: {}
+tolerations: []
+affinity: {}

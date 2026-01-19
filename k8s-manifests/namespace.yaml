@@ -1,0 +1,55 @@
+# TODO: Create namespace for the e-commerce application
+# Requirements:
+# - Name: ecommerce-app
+# - Labels for Azure Workload Identity
+# - Pod Security Standards: restricted level
+# - Proper resource quotas for the namespace
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce-app
+  labels:
+    # TODO: Add appropriate labels
+    # name: ecommerce-app
+    # azure.workload.identity/use: "true"
+    # pod-security.kubernetes.io/enforce: restricted
+    # pod-security.kubernetes.io/audit: restricted
+    # pod-security.kubernetes.io/warn: restricted
+  annotations:
+    # TODO: Add any necessary annotations
+---
+# TODO: Create ResourceQuota for the namespace
+# Requirements:  
+# - CPU requests: 2 cores total
+# - Memory requests: 4Gi total
+# - CPU limits: 4 cores total
+# - Memory limits: 8Gi total
+# - PVCs: 5 maximum
+# - Services: 10 maximum
+# - Pods: 20 maximum
+
+# apiVersion: v1
+# kind: ResourceQuota
+# metadata:
+#   name: ecommerce-quota
+#   namespace: ecommerce-app
+# spec:
+#   hard:
+#     # TODO: Define resource limits
+
+---
+# TODO: Create NetworkPolicy for namespace isolation
+# Requirements:
+# - Allow ingress from Application Gateway
+# - Allow egress to internet for external APIs
+# - Allow internal communication between pods
+# - Deny all other traffic
+
+# apiVersion: networking.k8s.io/v1
+# kind: NetworkPolicy
+# metadata:
+#   name: namespace-isolation
+#   namespace: ecommerce-app
+# spec:
+#   # TODO: Define network policy rules
