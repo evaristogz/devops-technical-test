@@ -147,6 +147,19 @@ variable "postgres_admin_username" {
   sensitive   = true
 }
 
+variable "postgres_admin_password" {
+  description = "Contraseña del usuario administrador para PostgreSQL"
+  type        = string
+  default     = "PasswordTEMPORAL123!"
+  sensitive   = true
+}
+
+variable "postgres_version" {
+  description = "Versión de PostgreSQL Flexible Server"
+  type        = string
+  default     = "17" # Disponible versión 18 a fecha de enero 2026
+}
+
 
 
 # TODO: Add variables for Application Gateway
@@ -172,11 +185,16 @@ variable "app_gateway_capacity" {
   default     = 2
 }
 
+variable "log_analytics_sku" {
+  description = "SKU del Log Analytics Workspace"
+  type        = string
+  default     = "PerGB2018"
 
-
-# TODO: Add variables for monitoring
-# - log_analytics_retention_days (number, default 30)
-# - enable_application_insights (bool, default true)
+  validation {
+    condition     = contains(["Free", "Standard", "Premium", "PerGB2018", "Standalone"], var.log_analytics_sku)
+    error_message = "El SKU debe ser: Free, Standard, Premium, PerGB2018, o Standalone."
+  }
+}
 
 variable "log_analytics_retention_days" {
   description = "Días de retención de logs en Log Analytics"
