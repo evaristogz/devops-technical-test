@@ -185,11 +185,30 @@ variable "agw_subnet_address_prefix" {
   default     = "10.0.3.0/24"
 }
 
+
+# Variables para Azure Container Registry (ACR)
+variable "acr_sku" {
+  description = "SKU del Azure Container Registry"
+  type        = string
+  default     = "Standard"
+
+  validation {
+    condition     = contains(["Basic", "Standard", "Premium"], var.acr_sku)
+    error_message = "El SKU debe ser: Basic, Standard, o Premium."
+  }
+}
+
+variable "acr_admin_enabled" {
+  description = "Habilitar cuenta admin en ACR (menos seguro)"
+  type        = bool
+  default     = false
+}
+
 # Locals for resource naming and tagging
 locals {
   # TODO: Define naming convention
   # name_prefix = "${var.project_name}-${var.environment}"
-  
+
   # TODO: Define common tags
   # common_tags = {
   #   Environment = var.environment
