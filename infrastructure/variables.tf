@@ -1,5 +1,12 @@
 # Variables for Azure E-commerce Infrastructure
 
+# Azure Subscription
+variable "subscription_id" {
+  description = "ID de la suscripción de Azure"
+  type        = string
+  sensitive   = true
+}
+
 # Environment configuration
 variable "environment" {
   description = "Entorno (dev, staging, prod)"
@@ -202,11 +209,7 @@ variable "log_analytics_retention_days" {
   default     = 30
 }
 
-variable "enable_application_insights" {
-  description = "Habilitar Application Insights"
-  type        = bool
-  default     = true
-}
+
 
 # TODO: Add variables for networking
 # - vnet_address_space (list(string), default ["10.0.0.0/16"])

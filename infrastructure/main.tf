@@ -25,7 +25,7 @@ terraform {
   # }
   ###
 
-  ### Comentar si se usa backend "azurerm"
+  ## Comentar si se usa backend "azurerm"
   cloud {
     organization = "EGZ-TC"
 
@@ -33,10 +33,11 @@ terraform {
       name = "ecommerce-dev"
     }
   }
+  ##
 }
-###
 
 provider "azurerm" {
+  subscription_id = var.subscription_id
   features {
     key_vault {
       purge_soft_delete_on_destroy    = true
@@ -46,6 +47,7 @@ provider "azurerm" {
       prevent_deletion_if_contains_resources = false
     }
   }
+  use_cli = true
 }
 
 # Data sources
@@ -266,16 +268,12 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   default_node_pool {
     name            = "system"
+    node_count      = var.aks_system_node_count
     vm_size         = var.aks_vm_size
     os_disk_size_gb = var.aks_os_disk_size_gb
     vnet_subnet_id  = azurerm_subnet.aks.id
-
-    type                = "VirtualMachineScaleSets"
-    enable_auto_scaling = var.aks_auto_scaling_enabled
-    min_count           = var.aks_min_count
-    max_count           = var.aks_max_count
-
-    tags = local.common_tags
+    type            = "VirtualMachineScaleSets"
+    tags            = local.common_tags
   }
 
   identity {
@@ -289,17 +287,6 @@ resource "azurerm_kubernetes_cluster" "main" {
     load_balancer_sku = var.aks_load_balancer_sku
   }
 
-  addon_profile {
-    http_application_routing {
-      enabled = false
-    }
-
-    oms_agent {
-      enabled                    = var.enable_application_insights
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
-    }
-  }
-
   tags = local.common_tags
 }
 
@@ -307,14 +294,13 @@ resource "azurerm_kubernetes_cluster" "main" {
 resource "azurerm_kubernetes_cluster_node_pool" "user" {
   name                  = "user"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-  node_count            = var.aks_user_node_count
-  vm_size               = var.aks_vm_size
-  os_disk_size_gb       = var.aks_os_disk_size_gb
-  vnet_subnet_id        = azurerm_subnet.aks.id
+  # node_count eliminado para autoescalado
+  vm_size         = var.aks_vm_size
+  os_disk_size_gb = var.aks_os_disk_size_gb
+  vnet_subnet_id  = azurerm_subnet.aks.id
 
-  enable_auto_scaling = var.aks_auto_scaling_enabled
-  min_count           = var.aks_min_count
-  max_count           = var.aks_max_count
+  min_count = var.aks_min_count
+  max_count = var.aks_max_count
 
   tags = local.common_tags
 }
@@ -361,7 +347,7 @@ resource "azurerm_key_vault_access_policy" "aks" {
   object_id    = azurerm_kubernetes_cluster.main.identity[0].principal_id
 
   secret_permissions = [
-    "get", "list"
+    "Get", "List"
   ]
   certificate_permissions = []
   key_permissions         = []
@@ -421,44 +407,11 @@ resource "azurerm_postgresql_flexible_server" "main" {
   zone                   = "1"
   delegated_subnet_id    = azurerm_subnet.database.id
   tags                   = local.common_tags
-
-  high_availability {
-    mode = "Disabled"
-  }
 }
 
 # Firewall rule para permitir acceso desde AKS
 resource "azurerm_postgresql_flexible_server_firewall_rule" "aks" {
-  name = "allow-aks"
-  backend_address_pool {
-    name = "aks-backend-pool"
-    # Puedes agregar direcciones IP o FQDN de tus servicios AKS aquí
-    fqdns = ["ingress-aks.local"]
-  }
-
-  backend_http_settings {
-    name                                = "http-settings"
-    cookie_based_affinity               = "Disabled"
-    port                                = 80
-    protocol                            = "Http"
-    pick_host_name_from_backend_address = false
-    probe_enabled                       = false
-  }
-
-  http_listener {
-    name                           = "http-listener"
-    frontend_ip_configuration_name = "frontend-ip"
-    frontend_port_name             = "http"
-    protocol                       = "Http"
-  }
-
-  request_routing_rule {
-    name                       = "http-rule"
-    rule_type                  = "Basic"
-    http_listener_name         = "http-listener"
-    backend_address_pool_name  = "aks-backend-pool"
-    backend_http_settings_name = "http-settings"
-  }
+  name             = "allow-aks"
   server_id        = azurerm_postgresql_flexible_server.main.id
   start_ip_address = "10.0.1.0"
   end_ip_address   = "10.0.1.255"
@@ -475,6 +428,33 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "aks" {
 # - Health probes configuration
 
 resource "azurerm_application_gateway" "main" {
+  backend_address_pool {
+    name  = "aks-backend-pool"
+    fqdns = ["ingress-aks.local"]
+  }
+
+  backend_http_settings {
+    name                                = "http-settings"
+    cookie_based_affinity               = "Disabled"
+    port                                = 80
+    protocol                            = "Http"
+    pick_host_name_from_backend_address = false
+  }
+
+  http_listener {
+    name                           = "http-listener"
+    frontend_ip_configuration_name = "frontend-ip"
+    frontend_port_name             = "http"
+    protocol                       = "Http"
+  }
+
+  request_routing_rule {
+    name                       = "http-rule"
+    rule_type                  = "Basic"
+    http_listener_name         = "http-listener"
+    backend_address_pool_name  = "aks-backend-pool"
+    backend_http_settings_name = "http-settings"
+  }
   name                = "agw-${local.name_prefix}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -566,7 +546,7 @@ resource "azurerm_storage_account" "main" {
 
 # File share para uploads
 resource "azurerm_storage_share" "uploads" {
-  name                 = "${var.project_name}-uploads"
-  storage_account_name = azurerm_storage_account.main.name
-  quota                = 10 # GB
+  name               = "${var.project_name}-uploads"
+  storage_account_id = azurerm_storage_account.main.id
+  quota              = 10 # GB
 }
