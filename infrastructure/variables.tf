@@ -78,6 +78,41 @@ variable "aks_max_count" {
   default     = 5
 }
 
+variable "kubernetes_version" {
+  description = "Versión de Kubernetes para AKS"
+  type        = string
+  default     = "1.33.5" # Predeterminada a fecha de enero 2026.
+}
+
+variable "aks_os_disk_size_gb" {
+  description = "Tamaño del disco OS de los nodos AKS en GB"
+  type        = number
+  default     = 25
+}
+
+variable "aks_load_balancer_sku" {
+  description = "SKU del Load Balancer para AKS"
+  type        = string
+  default     = "standard"
+
+  validation {
+    condition     = contains(["basic", "standard"], lower(var.aks_load_balancer_sku))
+    error_message = "El SKU debe ser: basic o standard."
+  }
+}
+
+variable "aks_service_cidr" {
+  description = "CIDR para los servicios de Kubernetes"
+  type        = string
+  default     = "10.1.0.0/16"
+}
+
+variable "aks_dns_service_ip" {
+  description = "IP del servicio DNS de Kubernetes"
+  type        = string
+  default     = "10.1.0.10"
+}
+
 
 
 # TODO: Add variables for database configuration
