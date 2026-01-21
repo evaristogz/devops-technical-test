@@ -43,33 +43,39 @@ variable "project_name" {
 
 variable "aks_system_node_count" {
   description = "Número de nodos en el pool de AKS"
-  default = 2
+  type        = number
+  default     = 2
 }
 
 variable "aks_user_node_count" {
   description = "Número de nodos en el pool de nodos de usuario de AKS"
-  default = 3
+  type        = number
+  default     = 3
 }
 
 variable "aks_vm_size" {
   description = "Tamaño de las VMs para los nodos de AKS"
-  default = "Standard_DS2_v2" # 2 CPUs, 7GB RAM
+  type        = string
+  default     = "Standard_DS2_v2" # 2 CPUs, 7GB RAM
   #default = "Standard_B2s" # 2 CPUs, 4GB RAM (Alternativa a usar en tfvars)
 }
 
 variable "aks_auto_scaling_enabled" {
   description = "Habilitar autoescalado para AKS"
-  default = true
+  type        = bool
+  default     = true
 }
 
 variable "aks_min_count" {
   description = "Número mínimo de nodos en el pool de AKS"
-  default = 2
+  type        = number
+  default     = 2
 }
 
 variable "aks_max_count" {
   description = "Número máximo de nodos en el pool de AKS"
-  default = 5
+  type        = number
+  default     = 5
 }
 
 
@@ -82,24 +88,28 @@ variable "aks_max_count" {
 
 variable "postgres_sku_name" {
   description = "Nombre SKU del servidor PostgreSQL"
-  default = "B_Standard_B1ms" # 1 vCPU, 2GM RAM 
+  type        = string
+  default     = "B_Standard_B1ms" # 1 vCPU, 2GM RAM 
   #default = "B_Standard_B1s" # 1 vCPU, 1GM RAM (Alternativa a usar en tfvars)
 }
 
 variable "postgres_storage_mb" {
   description = "Tamaño de almacenamiento del servidor PostgreSQL, en MB"
-  default = 32768 # 32GB
+  type        = number
+  default     = 32768 # 32GB
 }
 
 variable "postgres_backup_retention_days" {
   description = "Días de retención de backups para PostgreSQL"
-  default = 7
+  type        = number
+  default     = 7
 }
 
 variable "postgres_admin_username" {
   description = "Nombre de usuario administrador para PostgreSQL"
-  default   = "pgadmin"
-  sensitive = true
+  type        = string
+  default     = "pgadmin"
+  sensitive   = true
 }
 
 
@@ -111,17 +121,20 @@ variable "postgres_admin_username" {
 
 variable "app_gateway_sku_name" {
   description = "Nombre SKU del Application Gateway"
-  default = "Standard_v2"
+  type        = string
+  default     = "Standard_v2"
 }
 
 variable "app_gateway_sku_tier" {
   description = "Nivel del Application Gateway"
-  default = "Standard_v2"
+  type        = string
+  default     = "Standard_v2"
 }
 
 variable "app_gateway_capacity" {
   description = "Capacidad del Application Gateway"
-  default = 2
+  type        = number
+  default     = 2
 }
 
 
@@ -132,12 +145,14 @@ variable "app_gateway_capacity" {
 
 variable "log_analytics_retention_days" {
   description = "Días de retención de logs en Log Analytics"
-  default = 30
+  type        = number
+  default     = 30
 }
 
 variable "enable_application_insights" {
   description = "Habilitar Application Insights"
-  default = true
+  type        = bool
+  default     = true
 }
 
 # TODO: Add variables for networking
@@ -148,21 +163,25 @@ variable "enable_application_insights" {
 
 variable "vnet_address_space" {
   description = "Rango IP para la red virtual"
+  type        = list(string)
   default     = ["10.0.0.0/16"]
 }
 
 variable "aks_subnet_address_prefix" {
-  description = "Prefijo de dirección para la subnet de AKS"
+  description = "Subnet para AKS"
+  type        = string
   default     = "10.0.1.0/24"
 }
 
 variable "db_subnet_address_prefix" {
-  description = "Prefijo de dirección para la subnet de base de datos"
+  description = "Subnet para base de datos"
+  type        = string
   default     = "10.0.2.0/24"
 }
 
 variable "agw_subnet_address_prefix" {
-  description = "Prefijo de dirección para la subnet de Application Gateway"
+  description = "Subnet para Application Gateway"
+  type        = string
   default     = "10.0.3.0/24"
 }
 
@@ -170,7 +189,7 @@ variable "agw_subnet_address_prefix" {
 locals {
   # TODO: Define naming convention
   # name_prefix = "${var.project_name}-${var.environment}"
-
+  
   # TODO: Define common tags
   # common_tags = {
   #   Environment = var.environment
@@ -178,5 +197,15 @@ locals {
   #   ManagedBy   = "Terraform"
   #   Owner       = "DevOps-Team"
   #   CostCenter  = "Engineering"
-  # }
+  # 
+  name_prefix = "${var.project_name}-${var.environment}"
+
+  common_tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+    Owner       = "DevOps-Team"
+    CostCenter  = "Engineering"
+    CreatedDate = formatdate("YYYY-MM-DD", timestamp())
+  }
 }
