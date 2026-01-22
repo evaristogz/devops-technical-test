@@ -288,3 +288,23 @@ locals {
     CreatedDate = formatdate("YYYY-MM-DD", timestamp())
   }
 }
+
+# Configuración ACR
+variable "acr_name" {
+  description = "Nombre del Azure Container Registry"
+  type        = string
+  default     = "acrecommercedevne01"
+}
+
+variable "resource_group_name" {
+  description = "Nombre del resource group donde está el ACR"
+  type        = string
+  default     = "rg-ecommerce-dev"
+}
+
+# Kubernetes Configuration
+variable "kubernetes_namespace" {
+  description = "Namespace de Kubernetes donde crear el secret"
+  type        = string
+  default     = "ecommerce-app"
+}

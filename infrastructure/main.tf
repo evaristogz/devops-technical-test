@@ -11,6 +11,10 @@ terraform {
       source  = "hashicorp/azuread"
       version = "~> 3.00"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.00"
+    }
   }
 
   ### Descomentar un nivel para usar el backend de Azure Storage (previo haber creado los recursos necesarios)
@@ -48,6 +52,18 @@ provider "azurerm" {
     }
   }
   use_cli = true
+}
+
+provider "azuread" {
+  use_cli = true
+}
+
+# Provider de Kubernetes (se conecta al AKS configurado)
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.main.kube_config[0].host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].cluster_ca_certificate)
 }
 
 # Data sources
