@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: frontend
+    version: v1.0.0
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Ensure zero downtime
+  selector:
+    matchLabels:
+      app: ecommerce
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: ecommerce
+        component: frontend
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security: Use dedicated service account for Azure Workload Identity
+      serviceAccountName: ecommerce-frontend-sa
+      
+      # Image pull secret for ACR
+      imagePullSecrets:
+      - name: acr-secret
+      
+      # Security: Pod security context
+      # Nginx alpine se ejecuta como root por defecto
+      # La política de namespace (restricted) en ecommerce-app lo permite con excepciones
+      # securityContext:
+      #   seccompProfile:
+      #     type: RuntimeDefault
+      
+      # High availability: Spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - frontend
+              topologyKey: kubernetes.io/hostname
+      
+      containers:
+      - name: frontend
+        image: acrecommercedevne01.azurecr.io/ecommerce-frontend:latest
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        env:
+        - name: REACT_APP_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: REACT_APP_API_URL
+        - name: REACT_APP_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: REACT_APP_ENVIRONMENT
+        - name: NODE_ENV
+          value: "production"
+        
+        # Resource management
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        
+        # Health checks
+        # Startup probe: Give the app time to start (up to 5 minutes)
+        startupProbe:
+          httpGet:
+            path: /
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30  # 30 * 10s = 5 minutes max startup time
+        
+        # Liveness probe: Restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe: Remove from service if not ready
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Security: Container security context
+        # Nginx alpine tiene conflictos con restricciones de seguridad
+        # securityContext:
+        #   allowPrivilegeEscalation: false
+        #   readOnlyRootFilesystem: false
+        #   capabilities:
+        #     drop:
+        #     - ALL
+        
+        # Volume mounts for writable directories
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /.cache
+      
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

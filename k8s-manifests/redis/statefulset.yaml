@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: redis
+    version: v1.0.0
+spec:
+  # Service name for stable network identity (headless service)
+  serviceName: redis-headless
+  
+  replicas: 1  # Single instance for now (can scale to Redis Sentinel later)
+  
+  # Update strategy: RollingUpdate ensures zero downtime
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0  # Update all pods
+  
+  # Pod management: OrderedReady ensures sequential startup
+  podManagementPolicy: OrderedReady
+  
+  selector:
+    matchLabels:
+      app: ecommerce
+      component: redis
+  
+  template:
+    metadata:
+      labels:
+        app: ecommerce
+        component: redis
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6379"
+    spec:
+      # Security: Pod security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # Redis default user
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
+        
+        # Redis default port
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        
+        # Command to start Redis with custom config
+        command:
+        - redis-server
+        args:
+        - --appendonly
+        - "yes"  # Enable AOF for durability
+        - --save
+        - "900 1"  # Save snapshot if 1 key changed in 900 seconds
+        - --save
+        - "300 10"  # Save snapshot if 10 keys changed in 300 seconds
+        - --save
+        - "60 10000"  # Save snapshot if 10000 keys changed in 60 seconds
+        - --maxmemory
+        - "100mb"  # Max memory usage
+        - --maxmemory-policy
+        - "allkeys-lru"  # Eviction policy: remove least recently used keys
+        
+        # Environment variables (if password is needed)
+        # env:
+        # - name: REDIS_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: ecommerce-secrets-local
+        #       key: REDIS_PASSWORD
+        
+        # Resource management
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        
+        # Health checks
+        # Liveness probe: Check if Redis is responsive
+        livenessProbe:
+          tcpSocket:
+            port: redis
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe: Check if Redis can accept connections
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Security: Container security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Redis needs to write to disk
+          runAsNonRoot: true
+          runAsUser: 999
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mount for persistent data
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+          subPath: redis  # Use a subdirectory to avoid issues
+      
+      # Termination grace period for clean shutdown
+      terminationGracePeriodSeconds: 30
+  
+  # Volume claim template: Creates PVC for each pod
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+      labels:
+        app: ecommerce
+        component: redis
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: managed-csi  # AKS default
+      resources:
+        requests:
+          storage: 1Gi

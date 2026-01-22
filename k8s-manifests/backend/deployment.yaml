@@ -1,0 +1,200 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: backend
+    version: v1.0.0
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime deployments
+  selector:
+    matchLabels:
+      app: ecommerce
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: ecommerce
+        component: backend
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        # Force rollout on secret/configmap changes
+        checksum/config: "{{ configmap-checksum }}"
+        checksum/secret: "{{ secret-checksum }}"
+    spec:
+      # Security: Use dedicated service account for Azure Workload Identity
+      serviceAccountName: ecommerce-backend-sa
+      
+      # Image pull secret for ACR
+      imagePullSecrets:
+      - name: acr-secret
+      
+      # Security: Pod security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # High availability: Spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+      
+      # TODO: Init container for production to wait for database/dependencies
+      # Currently backend handles missing Redis gracefully with fallback data
+      
+      containers:
+      - name: backend
+        image: acrecommercedevne01.azurecr.io/ecommerce-backend:latest
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: NODE_ENV
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: LOG_LEVEL
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: REDIS_PORT
+        
+        # Build Redis URL from components
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)"
+        
+        # Sensitive data from Secret
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets-local  # Use ecommerce-secrets in production with Key Vault
+              key: DATABASE_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets-local
+              key: JWT_SECRET
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets-local
+              key: REDIS_PASSWORD
+              optional: true  # Redis may not require password in dev
+        
+        # Resource management - Backend needs more resources
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        # Health checks
+        # Startup probe: Give the app time to start and connect to dependencies
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 20  # 20 * 10s = 3.3 minutes max startup time
+        
+        # Liveness probe: Restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe: Remove from service if not ready
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Security: Container security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Node.js apps may need write access
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts for writable directories
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /.npm
+        - name: app-cache
+          mountPath: /app/.cache
+      
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      - name: app-cache
+        emptyDir: {}
+      
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60  # Give more time to finish ongoing requests

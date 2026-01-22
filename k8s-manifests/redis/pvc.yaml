@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: redis
+    version: v1.0.0
+spec:
+  # Access mode: ReadWriteOnce = can only be mounted by a single node
+  # This is appropriate for Redis as it's typically a single-instance cache
+  accessModes:
+  - ReadWriteOnce
+  
+  # Storage class for Azure Disk (managed disk in Azure)
+  storageClassName: managed-csi  # AKS default
+  
+  # Request 1Gi of storage as specified in requirements
+  resources:
+    requests:
+      storage: 1Gi
+  
+  # Volume mode: Filesystem (default)
+  volumeMode: Filesystem

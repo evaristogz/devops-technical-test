@@ -1,0 +1,32 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-frontend
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: frontend
+    version: v1.0.0
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ecommerce
+      component: frontend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-backend
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: backend
+    version: v1.0.0
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ecommerce
+      component: backend

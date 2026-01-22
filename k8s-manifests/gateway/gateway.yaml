@@ -1,0 +1,52 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ecommerce-gateway
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: gateway
+    version: v1.0.0
+spec:
+  # GatewayClass según el entorno:
+  # - Local (minikube): "envoy-gateway" (Envoy Gateway)
+  # - Local alternativa: "nginx" (NGINX Gateway Fabric)
+  # - Azure (AGW for Containers): nombre del operador (p.ej. "azure-application-gateway")
+  gatewayClassName: envoy-gateway
+  
+  listeners:
+  # HTTP listener para redirigir a HTTPS (sin hostname específico = acepta todos)
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  
+  # HTTPS listener para el frontend (dominio principal)
+  - name: https-web
+    hostname: ecommerce.example.com
+    port: 443
+    protocol: HTTPS
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: ecommerce-tls-cert
+    allowedRoutes:
+      namespaces:
+        from: Same
+  
+  # HTTPS listener para la API (subdominio api)
+  - name: https-api
+    hostname: api.ecommerce.example.com
+    port: 443
+    protocol: HTTPS
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: ecommerce-tls-cert
+    allowedRoutes:
+      namespaces:
+        from: Same

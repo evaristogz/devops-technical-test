@@ -1,0 +1,123 @@
+---
+# Default deny all traffic for app=ecommerce pods (ingress + egress)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-default-deny
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: security
+    version: v1.0.0
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce
+  policyTypes:
+  - Ingress
+  - Egress
+  # No ingress/egress rules -> everything denied by default
+---
+# Allow egress DNS (TCP/UDP 53) to kube-system
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-allow-dns
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+# Allow Frontend -> Backend (ingress to backend on 8080)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-frontend-to-backend
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce
+      component: backend
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: ecommerce
+          component: frontend
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+# Allow Backend -> Redis (egress from backend to redis 6379)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-backend-to-redis
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce
+      component: backend
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: ecommerce
+          component: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+---
+# Allow Backend -> PostgreSQL (egress to TCP/5432)
+# TIP: Cambia 'cidr' a la subred privada de la DB para mayor restricción
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-backend-to-postgres
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce
+      component: backend
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+      # except: ["0.0.0.0/0"]  # ejemplo para futuras restricciones
+    ports:
+    - protocol: TCP
+      port: 5432

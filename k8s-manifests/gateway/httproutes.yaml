@@ -1,0 +1,70 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: redirect-to-https
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: gateway
+    version: v1.0.0
+spec:
+  parentRefs:
+  - name: ecommerce-gateway
+    sectionName: http
+  hostnames:
+  - ecommerce.example.com
+  - api.ecommerce.example.com
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: frontend-route
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: frontend
+    version: v1.0.0
+spec:
+  parentRefs:
+  - name: ecommerce-gateway
+    sectionName: https-web
+  hostnames:
+  - ecommerce.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: frontend-service
+      port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-route
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: backend
+    version: v1.0.0
+spec:
+  parentRefs:
+  - name: ecommerce-gateway
+    sectionName: https-api
+  hostnames:
+  - api.ecommerce.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend-service
+      port: 8080
