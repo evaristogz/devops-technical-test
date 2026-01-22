@@ -1,80 +1,11 @@
 # Terraform Infrastructure for Azure E-commerce Application
 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.00"
-    }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 3.00"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.00"
-    }
-  }
-
-  ### Descomentar un nivel para usar el backend de Azure Storage (previo haber creado los recursos necesarios)
-  # backend "azurerm" {
-  #     # TODO: Configure remote state backend
-  #     # Uncomment and configure the following:
-  #     resource_group_name  = "rg-terraform-state"
-  #     storage_account_name = "tfstatedevops2025"
-  #     container_name       = "tfstate"
-  #     key                  = "ecommerce-app.tfstate"
-  #   }
-  # }
-  ###
-
-  ## Comentar si se usa backend "azurerm"
-  cloud {
-    organization = "EGZ-TC"
-
-    workspaces {
-      name = "ecommerce-dev"
-    }
-  }
-  ##
-}
-
-provider "azurerm" {
-  subscription_id = var.subscription_id
-  features {
-    key_vault {
-      purge_soft_delete_on_destroy    = true
-      recover_soft_deleted_key_vaults = true
-    }
-    resource_group {
-      prevent_deletion_if_contains_resources = false
-    }
-  }
-  use_cli = true
-}
-
-provider "azuread" {
-  use_cli = true
-}
-
-# Provider de Kubernetes (se conecta al AKS configurado)
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.main.kube_config[0].host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].cluster_ca_certificate)
-}
-
-# Data sources
-data "azurerm_client_config" "current" {}
-
-
-
 # TODO: Create Resource Group
 # Name: "rg-${local.name_prefix}"
 # Location: var.location
 # Tags: local.common_tags
+
+# Resource Group principal
 resource "azurerm_resource_group" "main" {
   name     = "rg-${local.name_prefix}"
   location = var.location

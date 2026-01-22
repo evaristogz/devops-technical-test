@@ -264,30 +264,7 @@ variable "resource_suffix" {
   }
 }
 
-# Locals for resource naming and tagging
-locals {
-  # TODO: Define naming convention
-  # name_prefix = "${var.project_name}-${var.environment}"
-
-  # TODO: Define common tags
-  # common_tags = {
-  #   Environment = var.environment
-  #   Project     = var.project_name
-  #   ManagedBy   = "Terraform"
-  #   Owner       = "DevOps-Team"
-  #   CostCenter  = "Engineering"
-  # 
-  name_prefix = "${var.project_name}-${var.environment}"
-
-  common_tags = {
-    Environment = var.environment
-    Project     = var.project_name
-    ManagedBy   = "Terraform"
-    Owner       = "DevOps-Team"
-    CostCenter  = "Engineering"
-    CreatedDate = formatdate("YYYY-MM-DD", timestamp())
-  }
-}
+# NOTA: Los locals (name_prefix, common_tags, etc.) se han movido a locals.tf
 
 # Configuración ACR
 variable "acr_name" {
