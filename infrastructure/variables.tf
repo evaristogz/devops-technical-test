@@ -22,7 +22,7 @@ variable "environment" {
 variable "location" {
   description = "Región de Azure para los recursos"
   type        = string
-  default     = "West Europe"
+  default     = "North Europe"
 
   validation {
     condition     = can(regex("^[A-Za-z ]+$", var.location))
@@ -63,14 +63,7 @@ variable "aks_user_node_count" {
 variable "aks_vm_size" {
   description = "Tamaño de las VMs para los nodos de AKS"
   type        = string
-  default     = "Standard_DS2_v2" # 2 CPUs, 7GB RAM
-  #default = "Standard_B2s" # 2 CPUs, 4GB RAM (Alternativa a usar en tfvars)
-}
-
-variable "aks_auto_scaling_enabled" {
-  description = "Habilitar autoescalado para AKS"
-  type        = bool
-  default     = true
+  default     = "Standard_DS2_v2" # Standard_DS2_v2 ni Standard_D2s_v2 están disponibles en West Europe. Se sobrescribe en tfvars.
 }
 
 variable "aks_min_count" {
@@ -94,7 +87,7 @@ variable "kubernetes_version" {
 variable "aks_os_disk_size_gb" {
   description = "Tamaño del disco OS de los nodos AKS en GB"
   type        = number
-  default     = 25
+  default     = 30
 }
 
 variable "aks_load_balancer_sku" {
@@ -258,6 +251,17 @@ variable "acr_admin_enabled" {
   description = "Habilitar cuenta admin en ACR (menos seguro)"
   type        = bool
   default     = false
+}
+
+variable "resource_suffix" {
+  description = "Sufijo único para recursos globales (Key Vault, PostgreSQL, ACR, Storage)"
+  type        = string
+  default     = "2026"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{4,8}$", var.resource_suffix))
+    error_message = "El sufijo debe contener solo letras minúsculas y números, entre 4 y 8 caracteres."
+  }
 }
 
 # Locals for resource naming and tagging

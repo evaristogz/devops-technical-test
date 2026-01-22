@@ -88,6 +88,7 @@ resource "azurerm_subnet" "aks" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.aks_subnet_address_prefix]
+  service_endpoints    = ["Microsoft.KeyVault"]
 }
 
 # Subnet para database
@@ -96,6 +97,16 @@ resource "azurerm_subnet" "database" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.db_subnet_address_prefix]
+  service_endpoints    = ["Microsoft.KeyVault"]
+
+  delegation {
+    name = "Microsoft.DBforPostgreSQL/flexibleServers"
+
+    service_delegation {
+      name    = "Microsoft.DBforPostgreSQL/flexibleServers"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
 }
 
 # Subnet para Application Gateway
@@ -104,6 +115,7 @@ resource "azurerm_subnet" "app_gateway" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.agw_subnet_address_prefix]
+  service_endpoints    = ["Microsoft.KeyVault"]
 }
 
 
@@ -157,8 +169,6 @@ resource "azurerm_subnet_network_security_group_association" "aks" {
   network_security_group_id = azurerm_network_security_group.aks.id
 }
 
-
-
 # NSG para Database
 resource "azurerm_network_security_group" "database" {
   name                = "nsg-db-${local.name_prefix}"
@@ -187,8 +197,6 @@ resource "azurerm_subnet_network_security_group_association" "database" {
   subnet_id                 = azurerm_subnet.database.id
   network_security_group_id = azurerm_network_security_group.database.id
 }
-
-
 
 # NSG para Application Gateway
 resource "azurerm_network_security_group" "app_gateway" {
@@ -228,11 +236,28 @@ resource "azurerm_network_security_rule" "agw_https" {
   network_security_group_name = azurerm_network_security_group.app_gateway.name
 }
 
+# Regla NSG - Permitir tráfico de gestión de Application Gateway v2 (puertos 65200-65535)
+resource "azurerm_network_security_rule" "agw_management" {
+  name                        = "AllowGatewayManager"
+  priority                    = 102
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "65200-65535"
+  source_address_prefix       = "GatewayManager"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.main.name
+  network_security_group_name = azurerm_network_security_group.app_gateway.name
+}
+
 # Asociar NSG con la subnet de Application Gateway
 resource "azurerm_subnet_network_security_group_association" "app_gateway" {
   subnet_id                 = azurerm_subnet.app_gateway.id
   network_security_group_id = azurerm_network_security_group.app_gateway.id
 }
+
+
 
 # TODO: Create Azure Container Registry
 # Requirements:
@@ -240,7 +265,7 @@ resource "azurerm_subnet_network_security_group_association" "app_gateway" {
 # - Admin user disabled (use managed identity)
 # - Integration with AKS cluster
 resource "azurerm_container_registry" "acr" {
-  name                = "acr${replace(local.name_prefix, "-", "")}"
+  name                = "acr${replace(local.name_prefix, "-", "")}${var.resource_suffix}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = var.acr_sku
@@ -290,28 +315,32 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = local.common_tags
 }
 
-# Nodo adicional para cargas de usuario
-resource "azurerm_kubernetes_cluster_node_pool" "user" {
-  name                  = "user"
-  kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-  # node_count eliminado para autoescalado
-  vm_size         = var.aks_vm_size
-  os_disk_size_gb = var.aks_os_disk_size_gb
-  vnet_subnet_id  = azurerm_subnet.aks.id
-
-  min_count = var.aks_min_count
-  max_count = var.aks_max_count
-
-  tags = local.common_tags
-}
+# Nodo adicional para cargas de usuario con autoscaling
+# COMENTADO TEMPORALMENTE: Mientras se solicita aumento de cuota de vCPU en North Europe
+# resource "azurerm_kubernetes_cluster_node_pool" "user" {
+#   name                  = "user"
+#   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
+#   vm_size               = var.aks_vm_size
+#   os_disk_size_gb       = var.aks_os_disk_size_gb
+#   vnet_subnet_id        = azurerm_subnet.aks.id
+#
+#   auto_scaling_enabled = true
+#   min_count            = var.aks_min_count
+#   max_count            = var.aks_max_count
+#
+#   tags = local.common_tags
+# }
 
 
 # ACR Pull Role Assignment para AKS
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  scope                = azurerm_container_registry.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.main.identity[0].principal_id
-}
+# NOTA: Requiere permisos 'Microsoft.Authorization/roleAssignments/write'
+# Si no tienes estos permisos, puedes asignar el rol manualmente:
+# az role assignment create --assignee <AKS_PRINCIPAL_ID> --role AcrPull --scope <ACR_ID>
+# resource "azurerm_role_assignment" "aks_acr_pull" {
+#   scope                = azurerm_container_registry.acr.id
+#   role_definition_name = "AcrPull"
+#   principal_id         = azurerm_kubernetes_cluster.main.identity[0].principal_id
+# }
 
 
 
@@ -323,12 +352,12 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 # - Enable for template deployment
 
 resource "azurerm_key_vault" "main" {
-  name                = "kv-${local.name_prefix}"
+  name                = "kv-${local.name_prefix}-${var.resource_suffix}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   sku_name            = "standard"
-  # soft_delete_enabled       = true # Deprecado 
+  # soft_delete_enabled       = true # Deprecado. Se deja por requisito de TODO.
   purge_protection_enabled = false
   network_acls {
     default_action = "Deny"
@@ -394,19 +423,37 @@ resource "azurerm_application_insights" "main" {
 # - Firewall rules for AKS subnet
 # - Backup retention: 7 days
 
+# Private DNS Zone for PostgreSQL
+resource "azurerm_private_dns_zone" "postgres" {
+  name                = "privatelink.postgres.database.azure.com"
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.common_tags
+}
+
+# Link Private DNS Zone to VNet
+resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
+  name                  = "postgres-dns-link"
+  resource_group_name   = azurerm_resource_group.main.name
+  private_dns_zone_name = azurerm_private_dns_zone.postgres.name
+  virtual_network_id    = azurerm_virtual_network.main.id
+  tags                  = local.common_tags
+}
+
 resource "azurerm_postgresql_flexible_server" "main" {
-  name                   = "psql-${local.name_prefix}"
-  location               = azurerm_resource_group.main.location
-  resource_group_name    = azurerm_resource_group.main.name
-  administrator_login    = var.postgres_admin_username
-  administrator_password = var.postgres_admin_password
-  sku_name               = var.postgres_sku_name
-  version                = var.postgres_version
-  storage_mb             = var.postgres_storage_mb
-  backup_retention_days  = var.postgres_backup_retention_days
-  zone                   = "1"
-  delegated_subnet_id    = azurerm_subnet.database.id
-  tags                   = local.common_tags
+  name                          = "psql-${local.name_prefix}-${var.resource_suffix}"
+  location                      = azurerm_resource_group.main.location
+  resource_group_name           = azurerm_resource_group.main.name
+  administrator_login           = var.postgres_admin_username
+  administrator_password        = var.postgres_admin_password
+  sku_name                      = var.postgres_sku_name
+  version                       = var.postgres_version
+  storage_mb                    = var.postgres_storage_mb
+  backup_retention_days         = var.postgres_backup_retention_days
+  zone                          = "1"
+  delegated_subnet_id           = azurerm_subnet.database.id
+  private_dns_zone_id           = azurerm_private_dns_zone.postgres.id
+  public_network_access_enabled = false
+  tags                          = local.common_tags
 }
 
 # Firewall rule para permitir acceso desde AKS
@@ -428,6 +475,48 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "aks" {
 # - Health probes configuration
 
 resource "azurerm_application_gateway" "main" {
+  name                = "agw-${local.name_prefix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  depends_on = [
+    azurerm_network_security_rule.agw_management,
+    azurerm_subnet_network_security_group_association.app_gateway
+  ]
+
+  sku {
+    name     = var.app_gateway_sku_name
+    tier     = var.app_gateway_sku_tier
+    capacity = var.app_gateway_capacity
+  }
+
+  gateway_ip_configuration {
+    name      = "gateway-ip-config"
+    subnet_id = azurerm_subnet.app_gateway.id
+  }
+
+  frontend_port {
+    name = "http"
+    port = 80
+  }
+
+  frontend_port {
+    name = "https"
+    port = 443
+  }
+
+  frontend_ip_configuration {
+    name                 = "public-ip"
+    public_ip_address_id = azurerm_public_ip.appgw.id
+  }
+
+  frontend_ip_configuration {
+    name                          = "private-ip"
+    subnet_id                     = azurerm_subnet.app_gateway.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.3.10"
+  }
+
   backend_address_pool {
     name  = "aks-backend-pool"
     fqdns = ["ingress-aks.local"]
@@ -443,7 +532,7 @@ resource "azurerm_application_gateway" "main" {
 
   http_listener {
     name                           = "http-listener"
-    frontend_ip_configuration_name = "frontend-ip"
+    frontend_ip_configuration_name = "public-ip"
     frontend_port_name             = "http"
     protocol                       = "Http"
   }
@@ -454,64 +543,7 @@ resource "azurerm_application_gateway" "main" {
     http_listener_name         = "http-listener"
     backend_address_pool_name  = "aks-backend-pool"
     backend_http_settings_name = "http-settings"
-  }
-  name                = "agw-${local.name_prefix}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  sku {
-    name     = var.app_gateway_sku_name
-    tier     = var.app_gateway_sku_tier
-    capacity = var.app_gateway_capacity
-  }
-  gateway_ip_configuration {
-    name      = "gateway-ip-config"
-    subnet_id = azurerm_subnet.app_gateway.id
-  }
-  frontend_port {
-    name = "http"
-    port = 80
-  }
-  frontend_port {
-    name = "https"
-    port = 443
-  }
-  frontend_ip_configuration {
-    name                          = "frontend-ip"
-    subnet_id                     = azurerm_subnet.app_gateway.id
-    private_ip_address_allocation = "Dynamic"
-  }
-  frontend_ip_configuration {
-    name                 = "public-ip"
-    public_ip_address_id = azurerm_public_ip.appgw.id
-  }
-  frontend_ip_configuration {
-    name                          = "private-ip"
-    subnet_id                     = azurerm_subnet.app_gateway.id
-    private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.3.10"
-  }
-  frontend_port {
-    name = "http"
-    port = 80
-  }
-  frontend_port {
-    name = "https"
-    port = 443
-  }
-  frontend_ip_configuration {
-    name                          = "frontend-ip"
-    subnet_id                     = azurerm_subnet.app_gateway.id
-    private_ip_address_allocation = "Dynamic"
-  }
-  frontend_ip_configuration {
-    name                 = "public-ip"
-    public_ip_address_id = azurerm_public_ip.appgw.id
-  }
-  frontend_ip_configuration {
-    name                          = "private-ip"
-    subnet_id                     = azurerm_subnet.app_gateway.id
-    private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.3.10"
+    priority                   = 100
   }
 
   tags = local.common_tags
@@ -536,7 +568,7 @@ resource "azurerm_public_ip" "appgw" {
 # - Private endpoint in AKS subnet
 
 resource "azurerm_storage_account" "main" {
-  name                     = "st${replace(local.name_prefix, "-", "")}"
+  name                     = "st${replace(local.name_prefix, "-", "")}${var.resource_suffix}"
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
