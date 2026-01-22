@@ -34,3 +34,6 @@ node_modules/
 crash.log
 crash.*.log
 *.log
+
+# Frontend
+src/frontend/build
