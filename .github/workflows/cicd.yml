@@ -1,5 +1,5 @@
 name: Azure E-commerce CI/CD Pipeline
-
+# TEST para ejecución workflow
 on:
   # TODO: Configure triggers
   # - Push to main and develop branches
