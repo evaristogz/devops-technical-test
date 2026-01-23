@@ -6,52 +6,136 @@ on:
   # - Pull requests to main
   # - Manual workflow dispatch with environment selection
   
-  # push:
-  #   branches: [main, develop]
-  #   paths-ignore:
-  #     - 'docs/**'
-  #     - '*.md'
-  # pull_request:
-  #   branches: [main]
-  # workflow_dispatch:
-  #   inputs:
-  #     environment:
-  #       description: 'Target environment'
-  #       required: true
-  #       default: 'dev'
-  #       type: choice
-  #       options:
-  #       - dev
-  #       - staging  
-  #       - prod
+  push:
+    branches: [main, solucion-evaristogz] # Usaré solucion-evaristogz por simplificar
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging  
+        - prod
 
 env:
   # TODO: Configure environment variables
-  # AZURE_CONTAINER_REGISTRY: myacr.azurecr.io
-  # AKS_CLUSTER_NAME: aks-ecommerce-prod
-  # AKS_RESOURCE_GROUP: rg-ecommerce-prod
-  # HELM_CHART_PATH: ./helm-chart
+  AZURE_CONTAINER_REGISTRY: acrecommerceegz1992.azurecr.io
+  AKS_CLUSTER_NAME: aks-ecommerce-dev
+  AKS_RESOURCE_GROUP: rg-ecommerce-dev
+  HELM_CHART_PATH: ./helm-chart
 
 # TODO: Configure permissions for OIDC
 permissions:
-  # id-token: write
-  # contents: read
-  # security-events: write
-  # pull-requests: write
+  id-token: write
+  contents: read
+  security-events: write
+  pull-requests: write
 
 jobs:
   # TODO: Job 1 - Infrastructure Validation
   validate-infrastructure:
-    # runs-on: ubuntu-latest
-    # name: Validate Terraform Infrastructure
+    runs-on: ubuntu-latest
+    name: Validate Terraform Infrastructure
     steps:
       # TODO: Implement steps:
       # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
       # - Setup Terraform
-      # - Azure login with OIDC  
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      # - Azure login with OIDC
+      - name: Azure Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
       # - Terraform init, validate, and plan
+      - name: Terraform Init
+        working-directory: ./infrastructure
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+      
+      - name: Terraform Validate
+        working-directory: ./infrastructure
+        run: terraform validate
+      
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./infrastructure
+        run: |
+          terraform plan -out=tfplan -no-color
+          terraform show -no-color tfplan > plan_output.txt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        continue-on-error: true
+      
       # - Security scan with tfsec
+      - name: Run tfsec Security Scan
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ./infrastructure
+          soft_fail: true
+          format: sarif
+          additional_args: --out tfsec-results.sarif
+      
+      - name: Upload tfsec SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: tfsec-results.sarif
+          category: tfsec
+      
       # - Comment on PR with plan results
+      - name: Comment PR with Terraform Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        env:
+          PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('./infrastructure/plan_output.txt', 'utf8');
+            const output = `#### Terraform Plan 📋
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`terraform
+            ${planOutput}
+            \`\`\`
+            
+            </details>
+            
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
       
   # TODO: Job 2 - Build and Test
   build-and-test:
