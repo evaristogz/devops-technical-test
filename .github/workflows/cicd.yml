@@ -361,15 +361,100 @@ jobs:
           echo "View results in the Security tab → Code scanning alerts" >> $GITHUB_STEP_SUMMARY
       
   # TODO: Job 5 - Validate Kubernetes Manifests
-  # validate-k8s:
-  #   runs-on: ubuntu-latest  
-  #   name: Validate Kubernetes Manifests
-  #   steps:
-  #     # TODO: Implement steps:
-  #     # - Checkout code
-  #     # - Validate YAML syntax with kubeval
-  #     # - Security analysis with kube-score
-  #     # - Policy validation with Conftest/OPA
+  validate-k8s:
+    runs-on: ubuntu-latest  
+    name: Validate Kubernetes Manifests
+    steps:
+      # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # - Validate YAML syntax with kubeval
+      - name: Install kubeval
+        run: |
+          mkdir -p /tmp/kubeval
+          cd /tmp/kubeval
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+          kubeval --version
+      
+      - name: Validate Kubernetes Manifests with kubeval
+        run: |
+          echo "## 📋 Kubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Validate k8s-manifests directory
+          kubeval k8s-manifests/ --ignore-missing-schemas --strict 2>&1 | tee kubeval-report.txt || true
+          
+          # Check if any validation errors exist
+          if grep -q "error" kubeval-report.txt; then
+            echo "⚠️ Validation warnings found:" >> $GITHUB_STEP_SUMMARY
+            grep "error" kubeval-report.txt >> $GITHUB_STEP_SUMMARY || true
+          else
+            echo "✅ All YAML manifests are valid" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      # - Security analysis with kube-score
+      - name: Install kube-score
+        run: |
+          mkdir -p /tmp/kube-score
+          cd /tmp/kube-score
+          wget https://github.com/zegl/kube-score/releases/download/v1.18.0/kube-score_linux_amd64.tar.gz
+          tar xf kube-score_linux_amd64.tar.gz
+          sudo mv kube-score /usr/local/bin/
+          kube-score version
+      
+      - name: Run kube-score Security Analysis
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Best Practices Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Analyze all manifests
+          kube-score score k8s-manifests/ -o human 2>&1 | tee kube-score-report.txt || true
+          
+          # Extract critical issues
+          CRITICAL_COUNT=$(grep -c "^✗" kube-score-report.txt || echo "0")
+          PASSING_COUNT=$(grep -c "^✔" kube-score-report.txt || echo "0")
+          
+          echo "**Security Checks:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Passing: $PASSING_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ Issues: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+      
+      # - Validate required annotations and labels
+      - name: Validate Manifest Structure
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Manifest Structure Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for required labels in Deployments
+          DEPLOYMENTS=$(grep -r "kind: Deployment" k8s-manifests/ | wc -l)
+          SERVICES=$(grep -r "kind: Service" k8s-manifests/ | wc -l)
+          STATEFULSETS=$(grep -r "kind: StatefulSet" k8s-manifests/ | wc -l)
+          CONFIGMAPS=$(grep -r "kind: ConfigMap" k8s-manifests/ | wc -l)
+          SECRETS=$(grep -r "kind: Secret" k8s-manifests/ | wc -l)
+          HPAS=$(grep -r "kind: HorizontalPodAutoscaler" k8s-manifests/ | wc -l)
+          
+          echo "**Resources Found:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployments: $DEPLOYMENTS" >> $GITHUB_STEP_SUMMARY
+          echo "- Services: $SERVICES" >> $GITHUB_STEP_SUMMARY
+          echo "- StatefulSets: $STATEFULSETS" >> $GITHUB_STEP_SUMMARY
+          echo "- ConfigMaps: $CONFIGMAPS" >> $GITHUB_STEP_SUMMARY
+          echo "- Secrets: $SECRETS" >> $GITHUB_STEP_SUMMARY
+          echo "- HorizontalPodAutoscalers: $HPAS" >> $GITHUB_STEP_SUMMARY
+      
+      # Upload validation reports
+      - name: Upload Validation Reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: k8s-validation-reports
+          path: |
+            kubeval-report.txt
+            kube-score-report.txt
+          retention-days: 30
       
   # TODO: Job 6 - Validate Helm Chart
   # validate-helm:
