@@ -1,0 +1,17 @@
+version: 2
+updates:
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily" # weekly a futuro
+    open-pull-requests-limit: 5
+    assignees:
+        - "evaristogz"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      actions-all:
+        patterns:
+          - "*"
