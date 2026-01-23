@@ -361,14 +361,14 @@ jobs:
       
       # - Upload SARIF results
       - name: Upload Trivy Frontend SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-frontend-results.sarif
           category: trivy-frontend
       
       - name: Upload Trivy Backend SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-backend-results.sarif
