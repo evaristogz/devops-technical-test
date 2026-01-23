@@ -641,15 +641,31 @@ jobs:
         run: |
           # Extract tag from build-images output
           FULL_TAG="${{ needs.build-images.outputs.frontend-tag }}"
-          IMAGE_TAG=$(echo "$FULL_TAG" | cut -d: -f2)
+          
+          # Debug: Show what we received
+          echo "Full tag received: ${FULL_TAG}"
+          
+          # Extract just the tag part (after the colon)
+          # Handle both formats: registry/repo:tag or just tag
+          if [[ "$FULL_TAG" == *":"* ]]; then
+            IMAGE_TAG=$(echo "$FULL_TAG" | rev | cut -d: -f1 | rev)
+          else
+            IMAGE_TAG="$FULL_TAG"
+          fi
+          
+          # If still empty or just 'latest', fallback to branch-sha
+          if [ -z "$IMAGE_TAG" ] || [ "$IMAGE_TAG" == "latest" ]; then
+            IMAGE_TAG="${{ github.ref_name }}-${{ github.sha }}"
+            echo "WARNING: Using fallback tag: ${IMAGE_TAG}"
+          fi
           
           # Determine registry (use GHCR as fallback)
           REGISTRY="ghcr.io/${{ github.repository_owner }}"
           
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "registry=${REGISTRY}" >> $GITHUB_OUTPUT
-          echo "Using registry: ${REGISTRY}"
-          echo "Using tag: ${IMAGE_TAG}"
+          echo "✅ Using registry: ${REGISTRY}"
+          echo "✅ Using image tag: ${IMAGE_TAG}"
       
       # - Azure login with OIDC
       - name: Azure Login with OIDC
