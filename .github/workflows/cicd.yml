@@ -35,6 +35,7 @@ permissions:
   contents: read
   security-events: write
   pull-requests: write
+  packages: write
 
 jobs:
   # TODO: Job 1 - Infrastructure Validation
@@ -226,7 +227,9 @@ jobs:
       
       # - Azure login with OIDC
       - name: Azure Login with OIDC
+        id: azure-login
         uses: azure/login@v2
+        continue-on-error: true
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -234,7 +237,18 @@ jobs:
       
       # - Login to ACR
       - name: Login to Azure Container Registry
+        id: acr-login
+        continue-on-error: true
+        if: steps.azure-login.outcome == 'success'
         run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
+      
+      # - Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       # - Setup Docker Buildx
       - name: Set up Docker Buildx
@@ -245,7 +259,9 @@ jobs:
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-frontend
+          images: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-frontend
+            ghcr.io/${{ github.repository_owner }}/ecommerce-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -256,7 +272,9 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-backend
+          images: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-backend
+            ghcr.io/${{ github.repository_owner }}/ecommerce-backend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -296,6 +314,15 @@ jobs:
         run: |
           echo "## 🐳 Docker Images Built" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.acr-login.outcome }}" == "success" ]; then
+            echo "✅ **ACR Status**: Connected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **ACR Status**: Unavailable (pushed to GHCR only)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "✅ **GHCR Status**: Connected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           echo "### Frontend Image" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta-frontend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
