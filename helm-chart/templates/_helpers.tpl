@@ -36,5 +36,6 @@ component: {{ .component }}
 {{- define "ecommerce-app.image" -}}
 {{- $registry := .Values.global.imageRegistry | default "" -}}
 {{- $repo := .image.repository -}}
-{{- if $registry }}{{ printf "%s/%s" $registry $repo }}{{ else }}{{ $repo }}{{ end -}}
+{{- $tag := .image.tag | default "latest" -}}
+{{- if $registry }}{{ printf "%s/%s:%s" $registry $repo $tag }}{{ else }}{{ printf "%s:%s" $repo $tag }}{{ end -}}
 {{- end -}}
