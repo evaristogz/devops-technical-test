@@ -400,8 +400,8 @@ jobs:
         run: |
           mkdir -p /tmp/kube-score
           cd /tmp/kube-score
-          wget https://github.com/zegl/kube-score/releases/download/v1.18.0/kube-score_linux_amd64.tar.gz
-          tar xf kube-score_linux_amd64.tar.gz
+          wget https://github.com/zegl/kube-score/releases/download/v1.20.0/kube-score_1.20.0_linux_amd64.tar.gz
+          tar xf kube-score_1.20.0_linux_amd64.tar.gz
           sudo mv kube-score /usr/local/bin/
           kube-score version
       
