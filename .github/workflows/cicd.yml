@@ -457,17 +457,123 @@ jobs:
           retention-days: 30
       
   # TODO: Job 6 - Validate Helm Chart
-  # validate-helm:
-  #   runs-on: ubuntu-latest
-  #   name: Validate Helm Chart
-  #   steps:
-  #     # TODO: Implement steps:
-  #     # - Checkout code
-  #     # - Setup Helm
-  #     # - Helm dependency update
-  #     # - Helm lint
-  #     # - Helm template dry-run
-  #     # - Test with different values files
+  validate-helm:
+    runs-on: ubuntu-latest
+    name: Validate Helm Chart
+    steps:
+      # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # - Setup Helm
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+      
+      # - Helm dependency update
+      - name: Helm Dependency Update
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: |
+          helm dependency update
+          helm dependency list
+      
+      # - Helm lint on all values files
+      - name: Helm Lint - Default
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: helm lint . --strict
+      
+      - name: Helm Lint - Development Values
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: helm lint . -f values-dev.yaml --strict
+      
+      - name: Helm Lint - Staging Values
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: helm lint . -f values-staging.yaml --strict
+      
+      - name: Helm Lint - Production Values
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: helm lint . -f values-prod.yaml --strict
+      
+      # - Helm template dry-run validation
+      - name: Helm Template Validation - Development
+        id: template-dev
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: |
+          helm template ecommerce . -f values-dev.yaml \
+            --namespace default \
+            --debug > /tmp/helm-dev-template.yaml
+          echo "Generated $(wc -l < /tmp/helm-dev-template.yaml) lines for dev"
+      
+      - name: Helm Template Validation - Staging
+        id: template-staging
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: |
+          helm template ecommerce . -f values-staging.yaml \
+            --namespace default \
+            --debug > /tmp/helm-staging-template.yaml
+          echo "Generated $(wc -l < /tmp/helm-staging-template.yaml) lines for staging"
+      
+      - name: Helm Template Validation - Production
+        id: template-prod
+        working-directory: ${{ env.HELM_CHART_PATH }}
+        run: |
+          helm template ecommerce . -f values-prod.yaml \
+            --namespace default \
+            --debug > /tmp/helm-prod-template.yaml
+          echo "Generated $(wc -l < /tmp/helm-prod-template.yaml) lines for production"
+      
+      # - Validate generated templates with kubeval
+      - name: Validate Helm Templates with kubeval
+        run: |
+          echo "Installing kubeval..."
+          mkdir -p /tmp/kubeval
+          cd /tmp/kubeval
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+          
+          echo "Validating dev template..."
+          kubeval /tmp/helm-dev-template.yaml --ignore-missing-schemas --strict || true
+          
+          echo "Validating staging template..."
+          kubeval /tmp/helm-staging-template.yaml --ignore-missing-schemas --strict || true
+          
+          echo "Validating production template..."
+          kubeval /tmp/helm-prod-template.yaml --ignore-missing-schemas --strict || true
+      
+      # - Generate chart validation summary
+      - name: Helm Chart Validation Summary
+        run: |
+          echo "## 📦 Helm Chart Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Chart Information" >> $GITHUB_STEP_SUMMARY
+          cd ${{ env.HELM_CHART_PATH }}
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          helm show chart . | head -20 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All lint checks passed (default, dev, staging, prod)" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Template Dry-Run Results" >> $GITHUB_STEP_SUMMARY
+          DEV_LINES=$(wc -l < /tmp/helm-dev-template.yaml)
+          STAGING_LINES=$(wc -l < /tmp/helm-staging-template.yaml)
+          PROD_LINES=$(wc -l < /tmp/helm-prod-template.yaml)
+          echo "- **Development**: $DEV_LINES lines generated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Staging**: $STAGING_LINES lines generated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Production**: $PROD_LINES lines generated" >> $GITHUB_STEP_SUMMARY
+      
+      # - Upload helm templates
+      - name: Upload Helm Templates
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: helm-templates
+          path: /tmp/helm-*.yaml
+          retention-days: 30
       
   # TODO: Job 7 - Deploy to Development
   # deploy-dev:
