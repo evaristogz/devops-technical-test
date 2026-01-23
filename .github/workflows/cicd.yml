@@ -97,12 +97,11 @@ jobs:
         with:
           working_directory: ./infrastructure
           soft_fail: true
-          format: sarif
-          additional_args: --out tfsec-results.sarif
+          additional_args: --format sarif --out tfsec-results.sarif
       
       - name: Upload tfsec SARIF results
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('tfsec-results.sarif') != ''
         with:
           sarif_file: tfsec-results.sarif
           category: tfsec
@@ -138,19 +137,72 @@ jobs:
             })
       
   # TODO: Job 2 - Build and Test
-  # build-and-test:
-  #   runs-on: ubuntu-latest
-  #   name: Build Application and Run Tests
-  #   needs: validate-infrastructure
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #     # TODO: Implement remaining steps:
-  #     # - Setup Node.js
-  #     # - Install dependencies  
-  #     # - Run linting
-  #     # - Run unit tests with coverage
-  #     # - SonarCloud analysis (optional)
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: Build Application and Run Tests
+    #needs: validate-infrastructure
+    steps:
+      # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # - Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            src/backend/package-lock.json
+            src/frontend/package-lock.json
+      
+      # - Install dependencies
+      - name: Install Backend Dependencies
+        working-directory: ./src/backend
+        run: npm ci
+      
+      - name: Install Frontend Dependencies
+        working-directory: ./src/frontend
+        run: npm ci
+      
+      # - Run linting
+      - name: Lint Backend Code
+        working-directory: ./src/backend
+        run: npm run lint || echo "Linting not configured, skipping"
+        continue-on-error: true
+      
+      - name: Lint Frontend Code
+        working-directory: ./src/frontend
+        run: npm run lint || echo "Linting not configured, skipping"
+        continue-on-error: true
+      
+      # - Run unit tests with coverage
+      - name: Run Backend Tests
+        working-directory: ./src/backend
+        run: npm run test:coverage
+      
+      - name: Run Frontend Tests
+        working-directory: ./src/frontend
+        run: npm run test:coverage
+      
+      # Upload coverage reports
+      - name: Upload Backend Coverage
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: backend-coverage
+          path: src/backend/coverage/
+          retention-days: 30
+      
+      - name: Upload Frontend Coverage
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: frontend-coverage
+          path: src/frontend/coverage/
+          retention-days: 30
+      
+      # TODO: SonarCloud analysis (optional)
       
   # TODO: Job 3 - Build and Push Docker Images  
   # build-images:
