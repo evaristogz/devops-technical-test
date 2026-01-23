@@ -142,7 +142,7 @@ jobs:
     # runs-on: ubuntu-latest
     # name: Build Application and Run Tests
     # needs: validate-infrastructure
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Checkout code
       # - Setup Node.js
@@ -159,7 +159,7 @@ jobs:
     # outputs:
     #   frontend-digest: ${{ steps.build-frontend.outputs.digest }}
     #   backend-digest: ${{ steps.build-backend.outputs.digest }}
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Checkout code
       # - Azure login with OIDC
@@ -174,7 +174,7 @@ jobs:
     # runs-on: ubuntu-latest
     # name: Security Scanning
     # needs: build-images
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Trivy container scanning
       # - Microsoft Defender for Containers
@@ -185,7 +185,7 @@ jobs:
   validate-k8s:
     # runs-on: ubuntu-latest  
     # name: Validate Kubernetes Manifests
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Checkout code
       # - Validate YAML syntax with kubeval
@@ -196,7 +196,7 @@ jobs:
   validate-helm:
     # runs-on: ubuntu-latest
     # name: Validate Helm Chart
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Checkout code
       # - Setup Helm
@@ -212,7 +212,7 @@ jobs:
     # needs: [security-scan, validate-k8s, validate-helm]
     # if: github.ref == 'refs/heads/develop'
     # environment: development
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Checkout code
       # - Azure login with OIDC
@@ -229,7 +229,7 @@ jobs:
     # needs: [security-scan, validate-k8s, validate-helm]
     # if: github.ref == 'refs/heads/main'
     # environment: staging
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Similar to dev deployment but with staging values
       # - More comprehensive testing
@@ -242,7 +242,7 @@ jobs:
     # needs: deploy-staging
     # if: github.ref == 'refs/heads/main'
     # environment: production
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Blue-green deployment strategy
       # - Health checks and validation
@@ -256,7 +256,7 @@ jobs:
     # name: Run Integration Tests  
     # needs: deploy-dev
     # if: github.ref == 'refs/heads/develop'
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Run API integration tests
       # - Frontend E2E tests with Playwright/Cypress
@@ -269,7 +269,7 @@ jobs:
     # name: Send Notifications
     # needs: [deploy-dev, deploy-staging, deploy-prod]
     # if: always()
-    steps:
+    # steps:
       # TODO: Implement steps:
       # - Teams/Slack notification
       # - Email notification on failure
