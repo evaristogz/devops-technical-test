@@ -5,7 +5,7 @@ global:
   fullnameOverride: ""
   namespaceOverride: ""
   version: v1.0.0
-  imageRegistry: acrecommercedevne01.azurecr.io
+  imageRegistry: acrecommerceegz1992.azurecr.io
   imagePullSecrets:
     - name: acr-secret
 

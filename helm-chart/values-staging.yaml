@@ -1,0 +1,29 @@
+# Staging overrides for ecommerce-app Helm chart
+
+config:
+  reactAppEnvironment: staging
+  reactAppApiUrl: https://staging-api.ecommerce.example.com
+  nodeEnv: staging
+  logLevel: info
+
+frontend:
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    cpu: 60
+
+backend:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    cpu: 65
+
+redis:
+  persistence:
+    size: 1Gi

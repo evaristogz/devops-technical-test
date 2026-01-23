@@ -1,0 +1,23 @@
+# Development overrides for ecommerce-app Helm chart
+
+config:
+  reactAppEnvironment: development
+  reactAppApiUrl: https://dev-api.ecommerce.example.com
+  nodeEnv: development
+  logLevel: debug
+
+frontend:
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+  autoscaling:
+    enabled: false
+
+backend:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+
+redis:
+  persistence:
+    size: 1Gi

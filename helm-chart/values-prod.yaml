@@ -1,0 +1,29 @@
+# Production overrides for ecommerce-app Helm chart
+
+config:
+  reactAppEnvironment: production
+  reactAppApiUrl: https://api.ecommerce.example.com
+  nodeEnv: production
+  logLevel: warn
+
+frontend:
+  replicaCount: 3
+  service:
+    type: LoadBalancer
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    cpu: 60
+
+backend:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    cpu: 65
+
+redis:
+  persistence:
+    size: 5Gi
