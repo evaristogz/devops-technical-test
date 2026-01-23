@@ -138,3 +138,19 @@ output "application_insights_instrumentation_key" {
   value       = azurerm_application_insights.main.instrumentation_key
   sensitive   = true
 }
+
+# Configuración GitHub Actions OIDC
+output "github_actions_client_id" {
+  description = "Client ID para GitHub Actions (AZURE_CLIENT_ID)"
+  value       = azuread_application.github_actions.client_id
+}
+
+output "github_actions_tenant_id" {
+  description = "Tenant ID para GitHub Actions (AZURE_TENANT_ID)"
+  value       = data.azuread_client_config.current.tenant_id
+}
+
+output "github_actions_subscription_id" {
+  description = "Subscription ID para GitHub Actions (AZURE_SUBSCRIPTION_ID)"
+  value       = var.subscription_id
+}
