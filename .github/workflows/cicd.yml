@@ -2,9 +2,6 @@ name: Azure E-commerce CI/CD Pipeline
 # TEST para ejecución workflow
 on:
   # TODO: Configure triggers
-  # - Push to main and develop branches
-  # - Pull requests to main
-  # - Manual workflow dispatch with environment selection
   
   push:
     branches: [main, solucion-evaristogz] # Usaré solucion-evaristogz por simplificar
@@ -69,6 +66,7 @@ jobs:
         working-directory: ./infrastructure
         run: terraform init
         env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -85,6 +83,7 @@ jobs:
           terraform plan -out=tfplan -no-color
           terraform show -no-color tfplan > plan_output.txt
         env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -151,7 +150,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
       
       # - Install dependencies
       - name: Install Backend Dependencies
