@@ -750,34 +750,51 @@ jobs:
           echo "- **Values**: values-dev.yaml" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
       
-      
-  # TODO: Job 8 - Deploy to Staging  
-  # deploy-staging:
-  #   runs-on: ubuntu-latest
-  #   name: Deploy to Staging Environment
-  #   needs: [security-scan, validate-k8s, validate-helm]
-  #   if: github.ref == 'refs/heads/main'
-  #   environment: staging
-  #   steps:
-  #     # TODO: Implement steps:
-  #     # - Similar to dev deployment but with staging values
-  #     # - More comprehensive testing
-  #     # - Performance testing (optional)
+  # TODO: Job 8 - Deploy to Staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging Environment
+    needs: [security-scan, validate-k8s, validate-helm]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Show Pending TODOs
+        run: |
+          echo "## 🚀 Job 8 - Deploy to Staging" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ⏳ Not yet implemented" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pending TODOs:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Checkout code" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Azure login with OIDC" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Get AKS credentials" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Setup Helm" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Deploy with Helm (staging values)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Run comprehensive tests" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Performance testing (optional)" >> $GITHUB_STEP_SUMMARY
       
   # TODO: Job 9 - Deploy to Production (Blue-Green)
-  # deploy-prod:
-  #   runs-on: ubuntu-latest  
-  #   name: Deploy to Production Environment
-  #   needs: deploy-staging
-  #   if: github.ref == 'refs/heads/main'
-  #   environment: production
-  #   steps:
-  #     # TODO: Implement steps:
-  #     # - Blue-green deployment strategy
-  #     # - Health checks and validation
-  #     # - Traffic switching
-  #     # - Rollback on failure
-  #     # - Notification to teams
+  deploy-prod:
+    runs-on: ubuntu-latest  
+    name: Deploy to Production Environment
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' && false
+    steps:
+      - name: Show Pending TODOs
+        run: |
+          echo "## 🚀 Job 9 - Deploy to Production (Blue-Green)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ⏳ Not yet implemented" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pending TODOs:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Checkout code" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Azure login with OIDC" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Get AKS credentials" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Setup Helm" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Blue-green deployment strategy" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Health checks and validation" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Traffic switching" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Rollback on failure" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Notification to teams" >> $GITHUB_STEP_SUMMARY
       
   # TODO: Job 10 - Integration Tests
   # integration-tests:
