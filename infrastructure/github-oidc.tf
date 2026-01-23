@@ -3,10 +3,10 @@
 
 # Variables locales para la configuración de GitHub
 locals {
-  github_org             = "evaristogz"
-  github_repo            = "devops-technical-test"
-  github_develop_branch  = "solucion-evaristogz"
-  github_main_branch     = "main"
+  github_org            = "evaristogz"
+  github_repo           = "devops-technical-test"
+  github_develop_branch = "solucion-evaristogz"
+  github_main_branch    = "main"
 }
 
 # App Registration para GitHub Actions
@@ -27,8 +27,8 @@ resource "azuread_application_federated_identity_credential" "github_develop" {
   display_name   = "github-actions-develop"
   description    = "Federated credential para rama develop (solucion-evaristogz)"
 
-  issuer  = "https://token.actions.githubusercontent.com"
-  subject = "repo:${local.github_org}/${local.github_repo}:ref:refs/heads/${local.github_develop_branch}"
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${local.github_org}/${local.github_repo}:ref:refs/heads/${local.github_develop_branch}"
   audiences = ["api://AzureADTokenExchange"]
 }
 
@@ -38,8 +38,8 @@ resource "azuread_application_federated_identity_credential" "github_main" {
   display_name   = "github-actions-main"
   description    = "Federated credential para rama main"
 
-  issuer  = "https://token.actions.githubusercontent.com"
-  subject = "repo:${local.github_org}/${local.github_repo}:ref:refs/heads/${local.github_main_branch}"
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${local.github_org}/${local.github_repo}:ref:refs/heads/${local.github_main_branch}"
   audiences = ["api://AzureADTokenExchange"]
 }
 
@@ -49,8 +49,8 @@ resource "azuread_application_federated_identity_credential" "github_pr" {
   display_name   = "github-actions-pr"
   description    = "Federated credential para pull requests"
 
-  issuer  = "https://token.actions.githubusercontent.com"
-  subject = "repo:${local.github_org}/${local.github_repo}:pull_request"
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${local.github_org}/${local.github_repo}:pull_request"
   audiences = ["api://AzureADTokenExchange"]
 }
 
