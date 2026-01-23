@@ -163,11 +163,11 @@ jobs:
       # - Install dependencies
       - name: Install Backend Dependencies
         working-directory: ./src/backend
-        run: npm install
+        run: npm ci
       
       - name: Install Frontend Dependencies
         working-directory: ./src/frontend
-        run: npm install
+        run: npm ci
       
       # - Run linting
       - name: Lint Backend Code
