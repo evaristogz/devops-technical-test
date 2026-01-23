@@ -13,7 +13,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.00"
+      version = "~> 2.00" # 3.0.1 la considero demasiado nueva
     }
     azapi = {
       source  = "azure/azapi"
