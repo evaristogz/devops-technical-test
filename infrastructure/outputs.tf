@@ -153,4 +153,5 @@ output "github_actions_tenant_id" {
 output "github_actions_subscription_id" {
   description = "Subscription ID para GitHub Actions (AZURE_SUBSCRIPTION_ID)"
   value       = var.subscription_id
+  sensitive   = true
 }
