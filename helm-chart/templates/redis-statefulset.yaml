@@ -1,0 +1,92 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-redis
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: redis
+spec:
+  serviceName: {{ include "ecommerce-app.fullname" . }}-redis-headless
+  replicas: {{ .Values.redis.replicaCount }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "redis") | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "redis") | indent 8 }}
+        app: ecommerce
+        version: {{ default "v1.0.0" .Values.global.version }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6379"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: redis
+        image: {{ include "ecommerce-app.image" (dict "Values" .Values "image" .Values.redis.image) }}
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        command:
+        - redis-server
+        args:
+        - --appendonly
+        - "yes"
+        - --save
+        - "900 1"
+        - --save
+        - "300 10"
+        - --save
+        - "60 10000"
+        - --maxmemory
+        - "100mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
+        resources:
+{{ toYaml .Values.redis.resources | indent 10 }}
+        livenessProbe:
+{{ toYaml .Values.redis.probes.liveness | indent 10 }}
+        readinessProbe:
+{{ toYaml .Values.redis.probes.readiness | indent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 999
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+          subPath: redis
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+      labels:
+        app: ecommerce
+        component: redis
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: {{ .Values.redis.persistence.storageClass | quote }}
+      resources:
+        requests:
+          storage: {{ .Values.redis.persistence.size }}
+{{- end }}

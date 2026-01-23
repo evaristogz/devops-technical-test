@@ -1,0 +1,135 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-backend
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "backend") | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "backend") | indent 8 }}
+        app: ecommerce
+        version: {{ default "v1.0.0" .Values.global.version }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ default (printf "%s-backend" (include "ecommerce-app.fullname" .)) .Values.serviceAccounts.backend.name }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.global.imagePullSecrets | indent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: backend
+        image: {{ include "ecommerce-app.image" (dict "Values" .Values "image" .Values.backend.image) }}
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: NODE_ENV
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: LOG_LEVEL
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: REDIS_PORT
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.name | default (printf "%s-secrets" (include "ecommerce-app.fullname" .)) }}
+              key: DATABASE_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.name | default (printf "%s-secrets" (include "ecommerce-app.fullname" .)) }}
+              key: JWT_SECRET
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.name | default (printf "%s-secrets" (include "ecommerce-app.fullname" .)) }}
+              key: REDIS_PASSWORD
+              optional: true
+        resources:
+{{ toYaml .Values.backend.resources | indent 10 }}
+        startupProbe:
+{{ toYaml .Values.backend.probes.startup | indent 10 }}
+        livenessProbe:
+{{ toYaml .Values.backend.probes.liveness | indent 10 }}
+        readinessProbe:
+{{ toYaml .Values.backend.probes.readiness | indent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /.npm
+        - name: app-cache
+          mountPath: /app/.cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      - name: app-cache
+        emptyDir: {}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
+{{- end }}

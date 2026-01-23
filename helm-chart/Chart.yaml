@@ -10,6 +10,23 @@ appVersion: "1.0.0"
 # - sources URLs
 # - maintainers information
 
+keywords:
+  - ecommerce
+  - azure
+  - microservices
+  - aks
+  - nodejs
+  - react
+  - redis
+  - helm
+home: https://github.com/Fundacion-Cibervoluntarios/evaristogz-devops-technical-test
+sources:
+  - https://github.com/Fundacion-Cibervoluntarios/evaristogz-devops-technical-test
+maintainers:
+  - name: EGZ @ Fundacion-Cibervoluntarios
+    email: null@evaristogz.com
+    url: https://github.com/Fundacion-Cibervoluntarios
+
 # TODO: Add dependencies if using external charts
 # dependencies:
 #   - name: redis
@@ -28,3 +45,10 @@ appVersion: "1.0.0"
 #     - Initial release
 #     - Azure integration
 #     - Security hardening
+
+annotations:
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/changes: |
+    - Initial Helm chart
+    - Azure AKS support
+    - Frontend/Backend/Redis

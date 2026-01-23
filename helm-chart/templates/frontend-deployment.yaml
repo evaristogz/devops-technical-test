@@ -1,0 +1,91 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-frontend
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "frontend") | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "frontend") | indent 8 }}
+        app: ecommerce
+        version: {{ default "v1.0.0" .Values.global.version }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ default (printf "%s-frontend" (include "ecommerce-app.fullname" .)) .Values.serviceAccounts.frontend.name }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.global.imagePullSecrets | indent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - frontend
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: frontend
+        image: {{ include "ecommerce-app.image" (dict "Values" .Values "image" .Values.frontend.image) }}
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: REACT_APP_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: REACT_APP_API_URL
+        - name: REACT_APP_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "ecommerce-app.fullname" . }}-config
+              key: REACT_APP_ENVIRONMENT
+        - name: NODE_ENV
+          value: "production"
+        resources:
+{{ toYaml .Values.frontend.resources | indent 10 }}
+        startupProbe:
+{{ toYaml .Values.frontend.probes.startup | indent 10 }}
+        livenessProbe:
+{{ toYaml .Values.frontend.probes.liveness | indent 10 }}
+        readinessProbe:
+{{ toYaml .Values.frontend.probes.readiness | indent 10 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /.cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+{{- end }}

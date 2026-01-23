@@ -1,0 +1,27 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-frontend
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: frontend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: {{ .Values.frontend.service.type }}
+  sessionAffinity: {{ .Values.frontend.service.sessionAffinity }}
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .Values.frontend.service.sessionAffinityTimeoutSeconds }}
+  ports:
+  - name: http
+    port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.targetPort }}
+    protocol: TCP
+  selector:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "frontend") | indent 4 }}
+{{- end }}

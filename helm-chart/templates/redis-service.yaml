@@ -1,0 +1,41 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-redis-headless
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: redis
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "6379"
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: redis
+    protocol: TCP
+  selector:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "redis") | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ecommerce-app.fullname" . }}-redis
+  namespace: {{ include "ecommerce-app.namespace" . }}
+  labels:
+{{ include "ecommerce-app.labels" . | indent 4 }}
+    component: redis
+spec:
+  type: ClusterIP
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: redis
+    protocol: TCP
+  selector:
+{{ include "ecommerce-app.selectorLabels" (dict "component" "redis") | indent 4 }}
+{{- end }}
