@@ -152,9 +152,6 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: |
-            src/backend/package-lock.json
-            src/frontend/package-lock.json
       
       # - Install dependencies
       - name: Install Backend Dependencies
@@ -205,23 +202,99 @@ jobs:
       # TODO: SonarCloud analysis (optional)
       
   # TODO: Job 3 - Build and Push Docker Images  
-  # build-images:
-  #   runs-on: ubuntu-latest
-  #   name: Build and Push Docker Images
-  #   needs: build-and-test
-  #   outputs:
-  #     frontend-digest: ${{ steps.build-frontend.outputs.digest }}
-  #     backend-digest: ${{ steps.build-backend.outputs.digest }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #     # TODO: Implement remaining steps:
-  #     # - Azure login with OIDC
-  #     # - Login to ACR
-  #     # - Setup Docker Buildx
-  #     # - Build and push frontend image
-  #     # - Build and push backend image
-  #     # - Generate image metadata
+  build-images:
+    runs-on: ubuntu-latest
+    name: Build and Push Docker Images
+    needs: build-and-test
+    outputs:
+      frontend-digest: ${{ steps.build-frontend.outputs.digest }}
+      backend-digest: ${{ steps.build-backend.outputs.digest }}
+      frontend-tag: ${{ steps.meta-frontend.outputs.tags }}
+      backend-tag: ${{ steps.meta-backend.outputs.tags }}
+    steps:
+      # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # - Azure login with OIDC
+      - name: Azure Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # - Login to ACR
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
+      
+      # - Setup Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # - Generate metadata for images
+      - name: Docker meta - Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Docker meta - Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.AZURE_CONTAINER_REGISTRY }}/ecommerce-backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      # - Build and push frontend image
+      - name: Build and Push Frontend Image
+        id: build-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+      
+      # - Build and push backend image
+      - name: Build and Push Backend Image
+        id: build-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/backend
+          file: ./src/backend/dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+      
+      # - Generate image metadata summary
+      - name: Image Build Summary
+        run: |
+          echo "## 🐳 Docker Images Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Frontend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: ${{ steps.meta-frontend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: ${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: ${{ steps.meta-backend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: ${{ steps.build-backend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
       
   # TODO: Job 4 - Security Scanning
   # security-scan:
