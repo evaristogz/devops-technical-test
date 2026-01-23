@@ -411,6 +411,7 @@ jobs:
   validate-k8s:
     runs-on: ubuntu-latest  
     name: Validate Kubernetes Manifests
+    needs: build-images
     steps:
       # - Checkout code
       - name: Checkout code
@@ -507,6 +508,7 @@ jobs:
   validate-helm:
     runs-on: ubuntu-latest
     name: Validate Helm Chart
+    needs: build-images
     steps:
       # - Checkout code
       - name: Checkout code
@@ -626,12 +628,28 @@ jobs:
   deploy-dev:
     runs-on: ubuntu-latest
     name: Deploy to Development Environment
-    needs: [security-scan, validate-k8s, validate-helm]
+    needs: [build-images, security-scan, validate-k8s, validate-helm]
     if: github.ref == 'refs/heads/solucion-evaristogz'
     steps:
       # - Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      # - Prepare image tags and registry
+      - name: Prepare Image Configuration
+        id: image-config
+        run: |
+          # Extract tag from build-images output
+          FULL_TAG="${{ needs.build-images.outputs.frontend-tag }}"
+          IMAGE_TAG=$(echo "$FULL_TAG" | cut -d: -f2)
+          
+          # Determine registry (use GHCR as fallback)
+          REGISTRY="ghcr.io/${{ github.repository_owner }}"
+          
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "registry=${REGISTRY}" >> $GITHUB_OUTPUT
+          echo "Using registry: ${REGISTRY}"
+          echo "Using tag: ${IMAGE_TAG}"
       
       # - Azure login with OIDC
       - name: Azure Login with OIDC
@@ -661,15 +679,15 @@ jobs:
           kubectl create namespace ecommerce-app --dry-run=client -o yaml | kubectl apply -f -
           echo "Namespace created/updated"
       
-      - name: Create ACR Image Pull Secret
+      - name: Create GHCR Image Pull Secret
         run: |
-          kubectl create secret docker-registry acr-secret \
-            --docker-server=${{ env.AZURE_CONTAINER_REGISTRY }} \
-            --docker-username=00000000-0000-0000-0000-000000000000 \
-            --docker-password=$(az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }} --expose-token --output tsv --query accessToken) \
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
             --namespace=ecommerce-app \
             --dry-run=client -o yaml | kubectl apply -f -
-          echo "ACR secret created/updated"
+          echo "GHCR secret created/updated"
       
       # - Deploy with Helm (dev values)
       - name: Deploy with Helm - Development
@@ -678,7 +696,10 @@ jobs:
           helm upgrade --install ecommerce ${{ env.HELM_CHART_PATH }} \
             --namespace ecommerce-app \
             --values ${{ env.HELM_CHART_PATH }}/values-dev.yaml \
-            --set global.imageRegistry=${{ env.AZURE_CONTAINER_REGISTRY }} \
+            --set global.imageRegistry=${{ steps.image-config.outputs.registry }} \
+            --set frontend.image.tag=${{ steps.image-config.outputs.image-tag }} \
+            --set backend.image.tag=${{ steps.image-config.outputs.image-tag }} \
+            --set global.imagePullSecrets[0].name=ghcr-secret \
             --wait \
             --timeout 5m \
             --debug
