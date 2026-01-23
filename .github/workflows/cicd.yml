@@ -27,10 +27,10 @@ on:
 
 env:
   # TODO: Configure environment variables
-  AZURE_CONTAINER_REGISTRY: acrecommerceegz1992.azurecr.io
-  AKS_CLUSTER_NAME: aks-ecommerce-dev
-  AKS_RESOURCE_GROUP: rg-ecommerce-dev
-  HELM_CHART_PATH: ./helm-chart
+  AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+  AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+  AKS_RESOURCE_GROUP: ${{ vars.AKS_RESOURCE_GROUP }}
+  HELM_CHART_PATH: ${{ vars.HELM_CHART_PATH }}
 
 # TODO: Configure permissions for OIDC
 permissions:
