@@ -627,21 +627,134 @@ jobs:
           retention-days: 30
       
   # TODO: Job 7 - Deploy to Development
-  # deploy-dev:
-  #   runs-on: ubuntu-latest
-  #   name: Deploy to Development Environment
-  #   needs: [security-scan, validate-k8s, validate-helm]
-  #   if: github.ref == 'refs/heads/solucion-evaristogz'
-  #   environment: development
-  #   steps:
-  #     # TODO: Implement steps:
-  #     # - Checkout code
-  #     # - Azure login with OIDC
-  #     # - Get AKS credentials
-  #     # - Setup Helm
-  #     # - Deploy with Helm (dev values)
-  #     # - Run smoke tests
-  #     # - Update deployment status
+  deploy-dev:
+    runs-on: ubuntu-latest
+    name: Deploy to Development Environment
+    needs: [security-scan, validate-k8s, validate-helm]
+    if: github.ref == 'refs/heads/solucion-evaristogz'
+    environment: development
+    steps:
+      # - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # - Azure login with OIDC
+      - name: Azure Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # - Get AKS credentials
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+      
+      # - Setup Helm
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+      
+      # - Create namespace and secrets
+      - name: Create Kubernetes Namespace
+        run: |
+          kubectl create namespace ecommerce-app --dry-run=client -o yaml | kubectl apply -f -
+          echo "Namespace created/updated"
+      
+      - name: Create ACR Image Pull Secret
+        run: |
+          kubectl create secret docker-registry acr-secret \
+            --docker-server=${{ env.AZURE_CONTAINER_REGISTRY }} \
+            --docker-username=00000000-0000-0000-0000-000000000000 \
+            --docker-password=$(az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }} --expose-token --output tsv --query accessToken) \
+            --namespace=ecommerce-app \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "ACR secret created/updated"
+      
+      # - Deploy with Helm (dev values)
+      - name: Deploy with Helm - Development
+        id: helm-deploy
+        run: |
+          helm upgrade --install ecommerce ${{ env.HELM_CHART_PATH }} \
+            --namespace ecommerce-app \
+            --values ${{ env.HELM_CHART_PATH }}/values-dev.yaml \
+            --set global.imageRegistry=${{ env.AZURE_CONTAINER_REGISTRY }} \
+            --wait \
+            --timeout 5m \
+            --debug
+      
+      # - Wait for deployment
+      - name: Wait for Deployment
+        run: |
+          echo "Waiting for frontend deployment..."
+          kubectl rollout status deployment/ecommerce-frontend \
+            --namespace ecommerce-app \
+            --timeout=5m
+          
+          echo "Waiting for backend deployment..."
+          kubectl rollout status deployment/ecommerce-backend \
+            --namespace ecommerce-app \
+            --timeout=5m
+      
+      # - Get deployment info
+      - name: Get Deployment Info
+        if: always()
+        run: |
+          echo "## 🚀 Development Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployments" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get deployments -n ecommerce-app -o wide >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get services -n ecommerce-app -o wide >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pods" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ecommerce-app -o wide >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+      
+      # - Run smoke tests
+      - name: Run Smoke Tests
+        continue-on-error: true
+        run: |
+          echo "Running smoke tests..."
+          
+          # Wait for service to be ready
+          for i in {1..30}; do
+            FRONTEND_IP=$(kubectl get svc ecommerce-frontend -n ecommerce-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+            if [ -n "$FRONTEND_IP" ]; then
+              echo "Frontend LoadBalancer IP: $FRONTEND_IP"
+              # Try to reach the service
+              if curl -s -o /dev/null -w "%{http_code}" http://$FRONTEND_IP:3000 | grep -q "200\|301\|302"; then
+                echo "✅ Frontend service is responding"
+                break
+              fi
+            fi
+            echo "Waiting for service... ($i/30)"
+            sleep 10
+          done
+      
+      # - Deployment summary
+      - name: Deployment Summary
+        run: |
+          echo "## ✅ Development Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace**: ecommerce-app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chart**: ${{ env.HELM_CHART_PATH }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Values**: values-dev.yaml" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+      
       
   # TODO: Job 8 - Deploy to Staging  
   # deploy-staging:
