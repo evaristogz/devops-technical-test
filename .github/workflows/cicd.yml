@@ -705,6 +705,20 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
           echo "GHCR secret created/updated"
       
+      # - Cleanup failed releases
+      - name: Cleanup Failed Helm Release
+        continue-on-error: true
+        run: |
+          echo "Checking for failed Helm releases..."
+          RELEASE_STATUS=$(helm status ecommerce -n ecommerce-app -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
+          
+          if [ "$RELEASE_STATUS" = "pending-upgrade" ] || [ "$RELEASE_STATUS" = "pending-install" ] || [ "$RELEASE_STATUS" = "failed" ]; then
+            echo "⚠️ Found release in $RELEASE_STATUS state, rolling back..."
+            helm rollback ecommerce -n ecommerce-app --wait=false || echo "Rollback failed or no previous release"
+          else
+            echo "✅ Release is in healthy state: $RELEASE_STATUS"
+          fi
+      
       # - Deploy with Helm (dev values)
       - name: Deploy with Helm - Development
         id: helm-deploy
