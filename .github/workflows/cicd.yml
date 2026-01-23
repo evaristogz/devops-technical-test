@@ -249,6 +249,38 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure Redis base image in GHCR/ACR
+        env:
+          ACR_LOGIN_OUTCOME: ${{ steps.acr-login.outcome }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends skopeo
+
+          SOURCE_IMAGE="docker://docker.io/library/redis:7-alpine"
+          TARGET_GHCR="docker://ghcr.io/evaristogz/redis:7-alpine"
+
+          echo "Checking Redis in GHCR..."
+          if skopeo inspect "$TARGET_GHCR" >/dev/null 2>&1; then
+            echo "GHCR redis image already present."
+          else
+            echo "Copying redis image to GHCR..."
+            skopeo copy "$SOURCE_IMAGE" "$TARGET_GHCR" --all
+          fi
+
+          if [ "$ACR_LOGIN_OUTCOME" = "success" ]; then
+            TARGET_ACR="docker://${{ env.AZURE_CONTAINER_REGISTRY }}/redis:7-alpine"
+            echo "Checking Redis in ACR..."
+            if skopeo inspect "$TARGET_ACR" >/dev/null 2>&1; then
+              echo "ACR redis image already present."
+            else
+              echo "Copying redis image to ACR..."
+              skopeo copy "$SOURCE_IMAGE" "$TARGET_ACR" --all
+            fi
+          else
+            echo "Skipping ACR copy (ACR login failed or ACR unavailable)."
+          fi
       
       # - Setup Docker Buildx
       - name: Set up Docker Buildx
