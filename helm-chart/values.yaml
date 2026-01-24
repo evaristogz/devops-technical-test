@@ -2,7 +2,7 @@
 
 global:
   nameOverride: ""
-  fullnameOverride: ""
+  fullnameOverride: "ecommerce"
   namespaceOverride: ""
   version: v1.0.0
   imageRegistry: acrecommerceegz1992.azurecr.io
