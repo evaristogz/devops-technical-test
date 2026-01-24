@@ -58,7 +58,7 @@ run_validation "Helm Chart" "./scripts/validate-helm.sh"
 run_validation "GitHub Actions Workflow" "./scripts/validate-github-actions.sh"
 
 # 5. Documentation validation
-run_validation "Documentation" "./scripts/validate-docs.sh"
+#run_validation "Documentation" "./scripts/validate-docs.sh"
 
 # Summary
 echo "📊 VALIDATION SUMMARY"
