@@ -46,6 +46,10 @@ frontend:
     targetPort: http
     sessionAffinity: ClientIP
     sessionAffinityTimeoutSeconds: 10800
+    # IP pública estática opcional cuando type=LoadBalancer
+    loadBalancerIP: ""
+    # Resource Group donde reside la Public IP (solo si no está en el node RG de AKS)
+    azureLbResourceGroup: ""
   resources:
     requests:
       cpu: 100m
@@ -125,6 +129,10 @@ backend:
     targetPort: http
     sessionAffinity: ClientIP
     sessionAffinityTimeoutSeconds: 10800
+    # IP pública estática opcional cuando type=LoadBalancer
+    loadBalancerIP: ""
+    # Resource Group donde reside la Public IP (solo si no está en el node RG de AKS)
+    azureLbResourceGroup: ""
   resources:
     requests:
       cpu: 200m

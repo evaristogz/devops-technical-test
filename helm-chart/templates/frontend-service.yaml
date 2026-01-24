@@ -11,8 +11,14 @@ metadata:
     prometheus.io/scrape: "true"
     prometheus.io/port: "3000"
     prometheus.io/path: "/metrics"
+{{- if .Values.frontend.service.azureLbResourceGroup }}
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: "{{ .Values.frontend.service.azureLbResourceGroup }}"
+{{- end }}
 spec:
   type: {{ .Values.frontend.service.type }}
+{{- if and (eq .Values.frontend.service.type "LoadBalancer") (.Values.frontend.service.loadBalancerIP) }}
+  loadBalancerIP: {{ .Values.frontend.service.loadBalancerIP }}
+{{- end }}
   sessionAffinity: {{ .Values.frontend.service.sessionAffinity }}
   sessionAffinityConfig:
     clientIP:
