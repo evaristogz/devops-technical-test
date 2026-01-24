@@ -1,16 +1,9 @@
 # Azure Container Registry (ACR) y autenticación para AKS
 
-# Data source para obtener el ACR existente
-data "azurerm_container_registry" "acr" {
-  name                = var.acr_name
-  resource_group_name = var.resource_group_name
-}
-
-# Habilitar admin user en ACR existente usando azapi provider
-# Esto actualiza el recurso existente sin necesidad de importarlo
+# Habilitar admin user en el ACR creado por Terraform usando azapi provider
 resource "azapi_update_resource" "acr_enable_admin" {
   type        = "Microsoft.ContainerRegistry/registries@2023-07-01"
-  resource_id = data.azurerm_container_registry.acr.id
+  resource_id = azurerm_container_registry.acr.id
 
   body = {
     properties = {
