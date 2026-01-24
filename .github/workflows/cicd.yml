@@ -295,10 +295,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/ecommerce-frontend
             ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-frontend', env.AZURE_CONTAINER_REGISTRY) || '' }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha
-            type=raw,value=${{ github.sha }}
+            type=sha,prefix=sha-
             type=raw,value=latest
       
       - name: Docker meta - Backend
@@ -309,10 +306,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/ecommerce-backend
             ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-backend', env.AZURE_CONTAINER_REGISTRY) || '' }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha
-            type=raw,value=${{ github.sha }}
+            type=sha,prefix=sha-
             type=raw,value=latest
       
       # - Build and push frontend image
