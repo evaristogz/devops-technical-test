@@ -3,5 +3,8 @@
 # Current Azure client configuration
 data "azurerm_client_config" "current" {}
 
+# Current Azure AD client configuration
+data "azuread_client_config" "current" {}
+
 # Subscription information
 data "azurerm_subscription" "current" {}

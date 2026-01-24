@@ -54,9 +54,6 @@ resource "azuread_application_federated_identity_credential" "github_pr" {
   audiences = ["api://AzureADTokenExchange"]
 }
 
-# Obtener datos del cliente actual (necesario para owners)
-data "azuread_client_config" "current" {}
-
 # Role Assignment: Contributor para el Service Principal en la suscripción
 resource "azurerm_role_assignment" "github_actions_contributor" {
   scope                = "/subscriptions/${var.subscription_id}"
