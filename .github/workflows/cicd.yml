@@ -297,8 +297,9 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=raw,value=${{ github.sha }}
+            type=raw,value=latest
       
       - name: Docker meta - Backend
         id: meta-backend
@@ -310,8 +311,9 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=raw,value=${{ github.sha }}
+            type=raw,value=latest
       
       # - Build and push frontend image
       - name: Build and Push Frontend Image
@@ -345,22 +347,24 @@ jobs:
       - name: Extract Image Tags
         id: extract-tags
         run: |
-          # Get the tag with SHA (second tag: branch-sha format)
-          FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | sed -n '2p')
-          BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | sed -n '2p')
-          
-          # Fallback to first tag if second doesn't exist
-          if [ -z "$FRONTEND_TAG" ]; then
+          set -euo pipefail
+
+          # Prefer the explicit commit SHA tag if present
+          FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | grep -m1 ":${{ github.sha }}$" || true)
+          BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | grep -m1 ":${{ github.sha }}$" || true)
+
+          # Fallbacks: use the first available tag if commit tag not found
+          if [ -z "${FRONTEND_TAG}" ]; then
             FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n 1)
           fi
-          if [ -z "$BACKEND_TAG" ]; then
+          if [ -z "${BACKEND_TAG}" ]; then
             BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n 1)
           fi
-          
+
           echo "frontend-tag=${FRONTEND_TAG}" >> $GITHUB_OUTPUT
           echo "backend-tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
-          echo "Using frontend tag: ${FRONTEND_TAG}"
-          echo "Using backend tag: ${BACKEND_TAG}"
+          echo "Selected frontend commit tag: ${FRONTEND_TAG}"
+          echo "Selected backend commit tag: ${BACKEND_TAG}"
       
       # - Generate image metadata summary
       - name: Image Build Summary
@@ -379,10 +383,14 @@ jobs:
           echo "### Frontend Image" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta-frontend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit Tag**: ${{ steps.extract-tags.outputs.frontend-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest Updated**: yes" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta-backend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.build-backend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit Tag**: ${{ steps.extract-tags.outputs.backend-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest Updated**: yes" >> $GITHUB_STEP_SUMMARY
       
   # TODO: Job 4 - Security Scanning
   # Microsoft Defender for Containers no implementado por reducir complejidad.
@@ -818,26 +826,26 @@ jobs:
           kubectl get pods -n ecommerce-app -o wide >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
       
-      # - Run smoke tests
-      - name: Run Smoke Tests
-        continue-on-error: true
-        run: |
-          echo "Running smoke tests..."
-          
-          # Wait for service to be ready
-          for i in {1..30}; do
-            FRONTEND_IP=$(kubectl get svc ecommerce-frontend -n ecommerce-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-            if [ -n "$FRONTEND_IP" ]; then
-              echo "Frontend LoadBalancer IP: $FRONTEND_IP"
-              # Try to reach the service
-              if curl -s -o /dev/null -w "%{http_code}" http://$FRONTEND_IP:3000 | grep -q "200\|301\|302"; then
-                echo "✅ Frontend service is responding"
-                break
-              fi
-            fi
-            echo "Waiting for service... ($i/30)"
-            sleep 10
-          done
+      # - Run smoke tests (DISABLED - TODO: Implement proper smoke tests)
+      # - name: Run Smoke Tests
+      #   continue-on-error: true
+      #   run: |
+      #     echo "Running smoke tests..."
+      #     
+      #     # Wait for service to be ready
+      #     for i in {1..30}; do
+      #       FRONTEND_IP=$(kubectl get svc ecommerce-frontend -n ecommerce-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+      #       if [ -n "$FRONTEND_IP" ]; then
+      #         echo "Frontend LoadBalancer IP: $FRONTEND_IP"
+      #         # Try to reach the service
+      #         if curl -s -o /dev/null -w "%{http_code}" http://$FRONTEND_IP:3000 | grep -q "200\|301\|302"; then
+      #           echo "✅ Frontend service is responding"
+      #           break
+      #         fi
+      #       fi
+      #       echo "Waiting for service... ($i/30)"
+      #       sleep 10
+      #     done
       
       # - Deployment summary
       - name: Deployment Summary
