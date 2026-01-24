@@ -39,7 +39,7 @@ frontend:
   image:
     repository: ecommerce-frontend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 3000
@@ -122,7 +122,7 @@ backend:
   image:
     repository: ecommerce-backend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8080
