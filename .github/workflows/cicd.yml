@@ -345,10 +345,22 @@ jobs:
       - name: Extract Image Tags
         id: extract-tags
         run: |
-          FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n 1)
-          BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n 1)
+          # Get the tag with SHA (second tag: branch-sha format)
+          FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | sed -n '2p')
+          BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | sed -n '2p')
+          
+          # Fallback to first tag if second doesn't exist
+          if [ -z "$FRONTEND_TAG" ]; then
+            FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n 1)
+          fi
+          if [ -z "$BACKEND_TAG" ]; then
+            BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n 1)
+          fi
+          
           echo "frontend-tag=${FRONTEND_TAG}" >> $GITHUB_OUTPUT
           echo "backend-tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
+          echo "Using frontend tag: ${FRONTEND_TAG}"
+          echo "Using backend tag: ${BACKEND_TAG}"
       
       # - Generate image metadata summary
       - name: Image Build Summary
