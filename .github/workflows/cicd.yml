@@ -291,7 +291,9 @@ jobs:
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-frontend{1}', env.AZURE_CONTAINER_REGISTRY, '') || '' }}ghcr.io/${{ github.repository_owner }}/ecommerce-frontend
+          images: |
+            ghcr.io/${{ github.repository_owner }}/ecommerce-frontend
+            ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-frontend', env.AZURE_CONTAINER_REGISTRY) || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -302,7 +304,9 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-backend{1}', env.AZURE_CONTAINER_REGISTRY, '') || '' }}ghcr.io/${{ github.repository_owner }}/ecommerce-backend
+          images: |
+            ghcr.io/${{ github.repository_owner }}/ecommerce-backend
+            ${{ steps.acr-login.outcome == 'success' && format('{0}/ecommerce-backend', env.AZURE_CONTAINER_REGISTRY) || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
