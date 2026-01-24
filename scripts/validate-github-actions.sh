@@ -9,7 +9,7 @@ echo "======================================"
 cd "$(dirname "$0")/.."
 
 # Check if workflow file exists
-WORKFLOW_FILE=".github/workflows/ci-cd.yml"
+WORKFLOW_FILE=".github/workflows/cicd.yml"
 
 if [ ! -f "$WORKFLOW_FILE" ]; then
     echo "❌ GitHub Actions workflow file not found: $WORKFLOW_FILE"
