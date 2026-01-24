@@ -18,6 +18,7 @@ COPY --from=builder /app/build /usr/share/nginx/html
 # Custom nginx config for SPA
 RUN echo 'server { \
   listen 3000; \
+  listen [::]:3000; \
   root /usr/share/nginx/html; \
   index index.html; \
   location / { \
