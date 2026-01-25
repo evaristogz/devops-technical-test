@@ -212,7 +212,7 @@ resource "azurerm_subnet_network_security_group_association" "app_gateway" {
 # - Admin user disabled (use managed identity)
 # - Integration with AKS cluster
 resource "azurerm_container_registry" "acr" {
-  name                = "acr${replace(local.name_prefix, "-", "")}${var.resource_suffix}"
+  name                = "acr${var.project_name}${var.resource_suffix}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = var.acr_sku
