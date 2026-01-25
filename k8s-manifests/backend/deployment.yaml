@@ -67,7 +67,7 @@ spec:
       
       containers:
       - name: backend
-        image: acrecommercedevne01.azurecr.io/ecommerce-backend:latest
+        image: acrecommerceegz1992.azurecr.io/ecommerce-backend:latest
         imagePullPolicy: IfNotPresent
         
         ports:

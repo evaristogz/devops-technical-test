@@ -256,7 +256,7 @@ variable "acr_admin_enabled" {
 variable "resource_suffix" {
   description = "Sufijo único para recursos globales (Key Vault, PostgreSQL, ACR, Storage)"
   type        = string
-  default     = "2026"
+  default     = "egz1992"
 
   validation {
     condition     = can(regex("^[a-z0-9]{4,8}$", var.resource_suffix))

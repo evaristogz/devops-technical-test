@@ -1,25 +1,20 @@
 # Azure Container Registry (ACR) y autenticación para AKS
 
-# Habilitar admin user en el ACR creado por Terraform usando azapi provider
-resource "azapi_update_resource" "acr_enable_admin" {
-  type        = "Microsoft.ContainerRegistry/registries@2023-07-01"
-  resource_id = azurerm_container_registry.acr.id
-
-  body = {
-    properties = {
-      adminUserEnabled = true
-    }
-  }
-}
+# Nota: El usuario admin de ACR se gestiona directamente con
+# `admin_enabled = var.acr_admin_enabled` en el recurso
+# `azurerm_container_registry` definido en main.tf.
+# En entornos de producción se recomienda dejarlo deshabilitado
+# y otorgar el rol "AcrPull" a la identidad de kubelet de AKS
+# para que los pods puedan extraer imágenes sin secretos.
 
 # NOTA: Creación del imagePullSecret en Kubernetes
 # 
 # Esto debe hacerse manualmente después de habilitar el admin:
 # 
-# ACR_USERNAME=$(az acr credential show --name acrecommercedevne01 --query username -o tsv)
-# ACR_PASSWORD=$(az acr credential show --name acrecommercedevne01 --query passwords[0].value -o tsv)
+# ACR_USERNAME=$(az acr credential show --name ${ACR_NAME} --query username -o tsv)
+# ACR_PASSWORD=$(az acr credential show --name ${ACR_NAME} --query passwords[0].value -o tsv)
 # kubectl create secret docker-registry acr-secret \
-#   --docker-server=acrecommercedevne01.azurecr.io \
+#   --docker-server=${ACR_NAME}.azurecr.io \
 #   --docker-username=$ACR_USERNAME \
 #   --docker-password=$ACR_PASSWORD \
 #   --docker-email=noreply@example.com \
