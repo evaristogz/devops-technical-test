@@ -345,6 +345,86 @@ az account show
 terraform version
 ```
 
+#### Configurar Service Principal para OIDC (opcional, para CI/CD)
+
+##### 1. Crear Service Principal en Azure para GitHub Actions
+
+```bash
+# Obtener tu Subscription ID
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+echo "Subscription ID: $SUBSCRIPTION_ID"
+
+# Crear Service Principal con rol Contributor
+az ad sp create-for-rbac \
+  --name "github-actions-sp" \
+  --role "Contributor" \
+  --scopes /subscriptions/$SUBSCRIPTION_ID
+
+# La salida incluye:
+# "appId": "<AZURE_CLIENT_ID>"     → Guardar este valor
+# "tenant": "<AZURE_TENANT_ID>"    → Guardar este valor
+# "password": "<SECRET>"            → NO usar (usaremos OIDC sin secretos)
+```
+
+##### 2. Configurar credenciales federadas OIDC
+
+```bash
+# Configurar variables de tu repositorio GitHub
+GITHUB_ORG="tu-usuario-o-organizacion"  # Ejemplo: "evaristogz"
+GITHUB_REPO="tu-repositorio"            # Ejemplo: "devops-technical-test"
+
+# Capturar el appId de la app registrada (app registration)
+APP_ID=$(az ad app list --filter "displayName eq 'github-actions-sp'" --query "[0].appId" -o tsv)
+echo "App ID: $APP_ID"
+
+# Obtener el Object ID de la app (no del service principal)
+APP_OBJECT_ID=$(az ad app show --id "$APP_ID" --query id -o tsv)
+echo "Application Object ID: $APP_OBJECT_ID"
+
+# Crear credencial federada para OIDC usando el Object ID de la app
+az ad app federated-credential create \
+  --id "$APP_OBJECT_ID" \
+  --parameters '{
+    "name": "github-'"${GITHUB_REPO}"'",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:'"${GITHUB_ORG}/${GITHUB_REPO}"':ref:refs/heads/*",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+echo "✅ OIDC configurado correctamente"
+```
+
+##### 3. Configurar secrets en GitHub (si usas GitHub Actions)
+
+Ve a tu repositorio → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+
+| Secret | Valor | Descripción |
+|--------|-------|-------------|
+| `AZURE_CLIENT_ID` | `appId` del paso 1 | Client ID del Service Principal |
+| `AZURE_TENANT_ID` | `tenant` del paso 1 | Tenant ID de Azure AD |
+| `AZURE_SUBSCRIPTION_ID` | Tu Subscription ID | ID de suscripción Azure |
+| `TF_API_TOKEN` | Token de Terraform Cloud | Solo si usas Terraform Cloud |
+
+**Nota**: `GITHUB_TOKEN` es automático y no requiere configuración.
+
+##### 4. Verificar configuración
+
+```bash
+# Verificar que el Service Principal existe
+az ad sp list --display-name github-actions-sp --output table
+
+# Ver credenciales federadas configuradas
+az ad app federated-credential list --id "$APP_OBJECT_ID" --output table
+
+# Verificar permisos del Service Principal
+SP_OBJECT_ID=$(az ad sp list --display-name github-actions-sp --query [0].id -o tsv)
+az role assignment list --assignee "$SP_OBJECT_ID" --output table
+```
+
+**Referencias**:
+- [Documentación oficial de Workload Identity Federation](https://docs.microsoft.com/en-us/azure/active-directory/workload-identities/workload-identity-federation-create-trust-github)
+- [GitHub Actions - Security hardening with OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
+
 #### Configurar backend de estado (en versions.tf)
 
 **Nota**: La configuración de backend se gestiona en el archivo `versions.tf` dentro del bloque `terraform {}`. Terraform puede usar estado local (default), remoto en Azure Storage o Terraform Cloud. Elige según tu caso:
@@ -618,65 +698,6 @@ kubectl get all -A
 
 # Ver eventos del cluster
 kubectl get events -A --sort-by='.lastTimestamp'
-```
-
-### Ejemplo completo (dev environment)
-
-```bash
-cd infrastructure
-
-# 1. Init
-terraform init
-
-# 2. Validate
-terraform validate
-terraform fmt -recursive
-
-# 3. Plan para dev
-terraform plan \
-  -var="environment=dev" \
-  -var="project_name=ecommerce" \
-  -var="subscription_id=$SUBSCRIPTION_ID" \
-  -out=tfplan
-
-# 4. Review plan
-cat tfplan  # Revisar cambios
-
-# 5. Aplicar
-terraform apply tfplan
-echo "Esperando 10-15 minutos a que AKS esté listo..."
-
-# 6. Obtener outputs de Terraform
-echo "=== Terraform Outputs ==="
-terraform output -raw aks_cluster_name
-terraform output -raw resource_group_name
-
-# 7. Acceder al AKS
-RESOURCE_GROUP=$(terraform output -raw resource_group_name)
-AKS_NAME=$(terraform output -raw aks_cluster_name)
-
-echo "Descargando kubeconfig para $AKS_NAME..."
-az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$AKS_NAME"
-
-# 8. Verificar acceso
-echo "=== Verificando acceso AKS ==="
-kubectl cluster-info
-kubectl get nodes -o wide
-kubectl get all -A
-
-# 9. Información de recursos
-echo "=== Información de Infraestructura ==="
-echo "ACR: $(terraform output -raw acr_login_server)"
-echo "Key Vault: $(terraform output -raw key_vault_name)"
-echo "PostgreSQL: $(terraform output -raw postgres_server_name)"
-echo "PostgreSQL FQDN: $(terraform output -raw postgres_fqdn)"
-echo "VNet: $(terraform output -raw vnet_name)"
-
-# 10. Guardar kubeconfig en archivo
-KUBECONFIG_FILE="kubeconfig-${AKS_NAME}.yaml"
-az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$AKS_NAME" \
-  --file "$KUBECONFIG_FILE"
-echo "Kubeconfig guardado en: $KUBECONFIG_FILE"
 ```
 
 **Después de este proceso, tendrás:**

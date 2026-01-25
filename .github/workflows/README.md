@@ -102,52 +102,6 @@ Ir a **Settings → Secrets and variables → Actions → New repository secret*
 | `TF_API_TOKEN` | Terraform Cloud | API Token | Token de autenticación para acceder al estado remoto de Terraform en Terraform Cloud |
 | `GITHUB_TOKEN` | GitHub Actions (automático) | OAuth 2.0 | Token automático de GitHub para acceder a GHCR y recursos del repositorio. Puede sobrescribirse si es necesario |
 
-#### Obtener valores de los secrets
-
-```bash
-# AZURE_CLIENT_ID y AZURE_TENANT_ID - Crear Service Principal
-az ad sp create-for-rbac \
-  --name "github-actions-sp" \
-  --role "Contributor" \
-  --scopes /subscriptions/<SUBSCRIPTION_ID>
-
-# Salida incluye:
-# "appId": "<AZURE_CLIENT_ID>"
-# "tenant": "<AZURE_TENANT_ID>"
-
-# AZURE_SUBSCRIPTION_ID
-az account show --query id -o tsv
-
-# TF_API_TOKEN - Crear en Terraform Cloud
-# 1. Ir a https://app.terraform.io/app/settings/tokens
-# 2. Click "Create an API token"
-# 3. Copiar el token generado
-
-# GITHUB_TOKEN - Automático (no requiere configuración manual)
-# Si necesitas generar uno manualmente:
-# 1. Ir a Settings → Developer settings → Personal access tokens → Tokens (classic)
-# 2. Click "Generate new token (classic)"
-# 3. Seleccionar scopes: repo, write:packages, delete:packages
-```
-
-#### Configurar OIDC en Azure
-
-```bash
-# Registrar GitHub como proveedor OIDC confiable
-# Ver: https://docs.microsoft.com/en-us/azure/active-directory/workload-identities/workload-identity-federation-create-trust-github
-
-GITHUB_ORG="evaristogz"
-GITHUB_REPO="devops-technical-test"
-
-az ad app federated-credential create \
-  --id $(az ad sp list --display-name github-actions-sp -o tsv --query [0].id) \
-  --parameters '{
-    "name": "github-${GITHUB_REPO}",
-    "issuer": "https://token.actions.githubusercontent.com",
-    "subject": "repo:'"${GITHUB_ORG}/${GITHUB_REPO}"':ref:refs/heads/*",
-    "audiences": ["api://AzureADTokenExchange"]
-  }'
-```
 
 ### Variables (públicas)
 
