@@ -41,12 +41,12 @@ frontend:
     tag: latest
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     port: 3000
     targetPort: http
     sessionAffinity: ClientIP
     sessionAffinityTimeoutSeconds: 10800
-    # IP pública estática opcional cuando type=LoadBalancer
+    # IP pública estática creada por Terraform (será pasada en deploy)
     loadBalancerIP: ""
     # Resource Group donde reside la Public IP (solo si no está en el node RG de AKS)
     azureLbResourceGroup: ""
