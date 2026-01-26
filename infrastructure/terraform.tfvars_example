@@ -1,0 +1,27 @@
+# Entorno y localización
+environment     = "dev"          # Por defecto
+location        = "North Europe" # Permite crear PostgreSQL Flexible Server
+project_name    = "ecommerce"    # Por defecto
+subscription_id = "INSERTA_TU_SUBSCRIPTION_ID_AQUI"
+
+# AKS
+aks_system_node_count = 1
+# aks_user_node_count   = 2
+aks_user_node_count   = 1                 # Limitado a 1 por cuota en Free Tier
+aks_vm_size           = "Standard_D2s_v3" # 2 CPUs, 8GB RAM
+aks_min_count         = 2
+aks_max_count         = 3 # 5 por defecto
+aks_load_balancer_sku = "standard"
+
+# PostgreSQL
+postgres_backup_retention_days = 7 # Requerido en el TODO de main.tf
+postgres_admin_username        = "pgadmin"
+postgres_version               = "14" # Requerida en el TODO de main.tf
+
+# Azure Container Registry
+acr_sku           = "Basic"
+acr_admin_enabled = true
+acr_name          = "acrecommerceegz1992"
+
+# Sufijo único para recursos globales
+resource_suffix = "egz1992"
