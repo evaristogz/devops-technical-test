@@ -3,7 +3,7 @@
 <p align="left">
   <!-- Estado de CI/CD GitHub Actions -->
   <a href="https://github.com/evaristogz/devops-technical-test/actions">
-    <img src="https://github.com/evaristogz/devops-technical-test/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+    <img src="https://github.com/evaristogz/devops-technical-test/actions/workflows/cicd.yml/badge.svg" alt="CI Status" />
   </a>
   <!-- Último tag frontend (GHCR) -->
   <a href="https://github.com/orgs/Fundacion-Cibervoluntarios/packages/container/ecommerce-frontend">
