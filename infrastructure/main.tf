@@ -486,7 +486,7 @@ resource "azurerm_application_gateway" "main" {
     protocol                            = "Http"
     pick_host_name_from_backend_address = false
     request_timeout                     = 30
-    
+
     probe_name = "frontend-health-probe"
   }
 
