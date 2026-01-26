@@ -1,6 +1,6 @@
 name: Azure E-commerce CI/CD Pipeline
 
-### ZONA TEST para ejecución de CI/CD. Añadir almohadillas para forzar.
+# ZONA TEST para ejecución de CI/CD. Añadir almohadillas para forzar.
 
 on:
   # TODO: Configure triggers
