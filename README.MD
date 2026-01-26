@@ -133,15 +133,7 @@ Outputs clave: nombre del ACR, kubeconfig, endpoint de base de datos, IP del App
   ```
   Espera a que termine y toma nota de la IP pública del Application Gateway (output `application_gateway_public_ip`).
 
-2. Instala la app con Helm:
-  ```bash
-  helm upgrade --install ecommerce ./helm-chart \
-    -n ecommerce-app \
-    -f helm-chart/values-dev.yaml
-  ```
-O bien, fuerza algún cambio en el repositorio para activar le CI/CD en GitHub Actions.
-
-4. Conéctate al clúster de Kubernetes de Azure (AKS)
+2. Conéctate al clúster de Kubernetes de Azure (AKS)
 Desde la raíz del repositorio haz:
   ```bash
    RG=$(terraform -chdir=infrastructure output -raw resource_group_name)
@@ -149,7 +141,7 @@ Desde la raíz del repositorio haz:
    az aks get-credentials -g "$RG" -n "$CLUSTER" --overwrite-existing
   ```
 
-5. Comprueba el estado del clúster en AKS:
+3. Comprueba el estado del clúster en AKS:
   ```bash
    kubectl cluster-info
    kubectl get nodes -o wide
@@ -158,17 +150,45 @@ Desde la raíz del repositorio haz:
    kubectl get --raw='/readyz?verbose'
   ```
 
-5. Comprueba el servicio frontend:
+4. Comprueba el servicio frontend:
   ```bash
-  kubectl get svc -n ecommerce-app
-  # frontend-service debe tener EXTERNAL-IP = 10.0.1.100
+   kubectl get svc -n ecommerce-app
+   # frontend-service debe tener EXTERNAL-IP = 10.0.1.100
   ```
 
-6. Accede a la app vía Application Gateway:
+5. Extrae la dirección IP pública del AGW de AKS:
+  ```bash
+   az network public-ip list --resource-group rg-ecommerce-dev --query "[].{name:name, ip:ipAddress}" -o table
+  ```
+
+6. Crea, manualmente, el Service Principal con rol Contributor
+  ```bash
+   az ad sp create-for-rbac \
+   --name "github-actions-sp" \
+   --role "Contributor" \
+   --scopes /subscriptions/$SUBSCRIPTION_ID
+  ```
+
+7. Extrae el ID del Service Principal y asigna el rol Network Contributor al SP
+  ```bash
+   SP_ID=$(az ad sp list --display-name "github-actions-sp" --query "[0].id" -o tsv)
+   SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+   RG_NAME="rg-ecommerce-dev"
+   VNET_NAME="vnet-ecommerce-dev"
+
+   az role assignment create \
+     --assignee "$SP_ID" \
+     --role "Network Contributor" \
+     --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_NAME}/providers/Microsoft.Network/virtualNetworks/${VNET_NAME}"
+  ```
+
+8. Accede a la app vía Application Gateway:
   ```bash
   curl http://<IP_PUBLICA_AGW>/
   # O abre en navegador: http://<IP_PUBLICA_AGW>/
   ```
+
+
 
 ---
 
