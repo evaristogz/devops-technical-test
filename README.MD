@@ -47,14 +47,10 @@
 2. [Arquitectura de alto nivel](#arquitectura-de-alto-nivel)
 3. [Estructura del repositorio](#estructura-del-repositorio)
 4. [Prerrequisitos locales](#prerrequisitos-locales)
-5. [Ejecución local rápida](#ejecución-local-rápida)
-6. [Infraestructura con Terraform](#infraestructura-con-terraform)
-7. [Despliegue en Kubernetes (manifests)](#despliegue-en-kubernetes-manifests)
-8. [Helm chart](#helm-chart)
-9. [CI/CD y validaciones](#cicd-y-validaciones)
-10. [Variables, secretos y credenciales](#variables-secretos-y-credenciales)
-11. [Troubleshooting](#troubleshooting)
-12. [Enlaces útiles](#enlaces-útiles)
+5. [Infraestructura con Terraform](#infraestructura-con-terraform)
+6. [Despliegue con Terraform + Helm](#despliegue-con-terraform--helm)
+7. [Variables, secretos y credenciales](#variables-secretos-y-credenciales)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -123,7 +119,7 @@ Outputs clave: nombre del ACR, kubeconfig, endpoint de base de datos, IP del App
 
 ---
 
-## Despliegue con Terraform + Helm
+## Despliegue con Terraform + Helm + GitHub Actions
 
 1. Despliega la infraestructura:
   ```bash
@@ -182,7 +178,9 @@ Desde la raíz del repositorio haz:
      --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_NAME}/providers/Microsoft.Network/virtualNetworks/${VNET_NAME}"
   ```
 
-8. Accede a la app vía Application Gateway:
+8. Genera un cambio en el repositorio para activar el workflow de GitHub Actions
+
+9. Accede a la app vía Application Gateway:
   ```bash
   curl http://<IP_PUBLICA_AGW>/
   # O abre en navegador: http://<IP_PUBLICA_AGW>/
