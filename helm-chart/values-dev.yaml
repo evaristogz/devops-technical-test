@@ -1,3 +1,9 @@
+ingress:
+  enabled: true
+  className: "azure/application-gateway"
+  annotations: {}
+  hosts: []
+  tls: []
 # Development overrides for ecommerce-app Helm chart
 
 config:
@@ -10,6 +16,8 @@ frontend:
   replicaCount: 1
   service:
     type: LoadBalancer
+    internal: true  # Internal Load Balancer - IP privada para que AGW enrute
+    loadBalancerIP: "10.0.1.100"  # IP estática dentro de la subnet AKS
   autoscaling:
     enabled: false
 

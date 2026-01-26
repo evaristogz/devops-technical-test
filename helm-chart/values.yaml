@@ -46,8 +46,10 @@ frontend:
     targetPort: http
     sessionAffinity: ClientIP
     sessionAffinityTimeoutSeconds: 10800
-    # IP pública estática creada por Terraform (será pasada en deploy)
-    loadBalancerIP: ""
+    # Internal Load Balancer - IP privada dentro de la VNet para que el AGW enrute
+    internal: true
+    # IP estática del Internal LB dentro de la subnet AKS (10.0.1.0/24)
+    loadBalancerIP: "10.0.1.100"
     # Resource Group donde reside la Public IP (solo si no está en el node RG de AKS)
     azureLbResourceGroup: ""
   resources:
@@ -237,8 +239,8 @@ redis:
       failureThreshold: 3
 
 ingress:
-  enabled: false
-  className: ""
+  enabled: true
+  className: "azure/application-gateway"
   annotations: {}
   hosts: []
   tls: []

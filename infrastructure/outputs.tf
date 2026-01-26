@@ -116,12 +116,6 @@ output "aks_node_resource_group" {
   value       = azurerm_kubernetes_cluster.main.node_resource_group
 }
 
-# IP pública para Services LoadBalancer en AKS
-output "aks_lb_public_ip_address" {
-  description = "Dirección IP pública estática para Services tipo LoadBalancer"
-  value       = azurerm_public_ip.aks_lb.ip_address
-}
-
 # Application Gateway
 output "application_gateway_name" {
   description = "Nombre del Application Gateway"

@@ -11,6 +11,9 @@ metadata:
     prometheus.io/scrape: "true"
     prometheus.io/port: "3000"
     prometheus.io/path: "/metrics"
+{{- if .Values.frontend.service.internal }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+{{- end }}
 {{- if .Values.frontend.service.azureLbResourceGroup }}
     service.beta.kubernetes.io/azure-load-balancer-resource-group: "{{ .Values.frontend.service.azureLbResourceGroup }}"
 {{- end }}

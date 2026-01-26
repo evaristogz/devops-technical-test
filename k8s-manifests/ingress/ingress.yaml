@@ -1,0 +1,75 @@
+# Ingress para Application Gateway Ingress Controller (AGIC)
+# Este recurso configura el Application Gateway para enrutar tráfico a los servicios de AKS
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-ingress
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: ingress
+    version: v1.0.0
+  annotations:
+    # Clase de ingress para Azure Application Gateway
+    kubernetes.io/ingress.class: azure/application-gateway
+    # Timeout del backend (30 segundos)
+    appgw.ingress.kubernetes.io/request-timeout: "30"
+    # Health probe path
+    appgw.ingress.kubernetes.io/health-probe-path: "/"
+spec:
+  rules:
+    # Regla para todo el tráfico (sin hostname específico)
+    - http:
+        paths:
+          # Frontend - ruta raíz
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 3000
+          # Backend API - rutas /api/*
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
+---
+# Ingress alternativo con hostname específico (opcional)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-ingress-with-host
+  namespace: ecommerce-app
+  labels:
+    app: ecommerce
+    component: ingress
+    version: v1.0.0
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/request-timeout: "30"
+spec:
+  rules:
+    - host: ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 3000
+    - host: api.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080

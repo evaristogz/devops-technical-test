@@ -259,7 +259,15 @@ resource "azurerm_kubernetes_cluster" "main" {
     load_balancer_sku = var.aks_load_balancer_sku
   }
 
+  # AGIC - Application Gateway Ingress Controller addon
+  # Permite que Application Gateway enrute tráfico directamente a los pods de AKS
+  ingress_application_gateway {
+    gateway_id = azurerm_application_gateway.main.id
+  }
+
   tags = local.common_tags
+
+  depends_on = [azurerm_application_gateway.main]
 }
 
 # Nodo adicional para cargas de usuario con autoscaling
@@ -465,16 +473,31 @@ resource "azurerm_application_gateway" "main" {
   }
 
   backend_address_pool {
-    name  = "aks-backend-pool"
-    fqdns = ["ingress-aks.local"]
+    name = "aks-backend-pool"
+    # IP del Internal Load Balancer del frontend-service en AKS
+    # Esta IP está en la subnet de AKS (10.0.1.0/24) y es accesible desde el AGW
+    ip_addresses = ["10.0.1.100"]
   }
 
   backend_http_settings {
     name                                = "http-settings"
     cookie_based_affinity               = "Disabled"
-    port                                = 80
+    port                                = 3000
     protocol                            = "Http"
     pick_host_name_from_backend_address = false
+    request_timeout                     = 30
+    
+    probe_name = "frontend-health-probe"
+  }
+
+  probe {
+    name                = "frontend-health-probe"
+    protocol            = "Http"
+    path                = "/"
+    host                = "10.0.1.100"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
   }
 
   http_listener {

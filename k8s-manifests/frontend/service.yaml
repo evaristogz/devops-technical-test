@@ -8,6 +8,10 @@ metadata:
     component: frontend
     version: v1.0.0
   annotations:
+    # Internal Load Balancer - IP privada dentro de la VNet para que AGW pueda enrutar
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    # IP estática dentro de la subnet AKS (10.0.1.0/24)
+    service.beta.kubernetes.io/azure-load-balancer-ipv4: "10.0.1.100"
     # Prometheus annotations for service discovery
     prometheus.io/scrape: "true"
     prometheus.io/port: "3000"

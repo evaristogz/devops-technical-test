@@ -595,13 +595,13 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
-      - name: Read Terraform Output - AKS LB Public IP
+      - name: Read Terraform Output - Application Gateway Public IP
         id: tf-output
         working-directory: ./infrastructure
         run: |
-          LB_IP=$(terraform output -raw aks_lb_public_ip_address)
-          echo "lb_ip=${LB_IP}" >> $GITHUB_OUTPUT
-          echo "✅ AKS LB Public IP: ${LB_IP}"
+          AGW_IP=$(terraform output -raw application_gateway_public_ip)
+          echo "agw_ip=${AGW_IP}" >> $GITHUB_OUTPUT
+          echo "✅ Application Gateway Public IP: ${AGW_IP}"
       
       # - Helm dependency update
       - name: Helm Dependency Update
@@ -814,7 +814,7 @@ jobs:
             --set global.imageRegistry=${{ steps.image-config.outputs.registry }} \
             --set frontend.image.tag=${{ steps.image-config.outputs.image-tag }} \
             --set backend.image.tag=${{ steps.image-config.outputs.image-tag }} \
-            --set frontend.service.loadBalancerIP=${{ steps.tf-output.outputs.lb_ip }} \
+            --set frontend.service.loadBalancerIP=10.0.1.100 \
             --set global.imagePullSecrets[0].name=ghcr-secret \
             --wait \
             --timeout 5m \
