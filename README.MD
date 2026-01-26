@@ -1,239 +1,197 @@
-# DevOps Technical Test
+# DevOps Technical Test - Evaristo GZ
 
-## 🎯 Objetivo
-Evaluar competencias técnicas en DevOps mediante la implementación de una solución completa en Azure usando Terraform, Kubernetes, Helm y GitHub Actions.
+<p align="left">
+  <!-- Estado de CI/CD GitHub Actions -->
+  <a href="https://github.com/Fundacion-Cibervoluntarios/evaristogz-devops-technical-test/actions">
+    <img src="https://github.com/Fundacion-Cibervoluntarios/evaristogz-devops-technical-test/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+  </a>
+  <!-- Último tag frontend (GHCR) -->
+  <a href="https://github.com/orgs/Fundacion-Cibervoluntarios/packages/container/ecommerce-frontend">
+    <img src="https://img.shields.io/badge/dynamic/json?label=frontend%20latest&query=%24[0].name&url=https://ghcr.io/v2/fundacion-cibervoluntarios/ecommerce-frontend/tags/list" alt="Frontend latest tag" />
+  </a>
+  <!-- Último tag backend (GHCR) -->
+  <a href="https://github.com/orgs/Fundacion-Cibervoluntarios/packages/container/ecommerce-backend">
+    <img src="https://img.shields.io/badge/dynamic/json?label=backend%20latest&query=%24[0].name&url=https://ghcr.io/v2/fundacion-cibervoluntarios/ecommerce-backend/tags/list" alt="Backend latest tag" />
+  </a>
+  <!-- Terraform -->
+  <a href="https://www.terraform.io/">
+    <img src="https://img.shields.io/badge/Terraform-1.0%2B-623CE4?logo=terraform" alt="Terraform" />
+  </a>
+  <!-- Helm -->
+  <a href="https://helm.sh/">
+    <img src="https://img.shields.io/badge/Helm-3.12%2B-0F1689?logo=helm" alt="Helm" />
+  </a>
+  <!-- Kubernetes -->
+  <a href="https://kubernetes.io/">
+    <img src="https://img.shields.io/badge/Kubernetes-1.28%2B-326CE5?logo=kubernetes" alt="Kubernetes" />
+  </a>
+  <!-- Docker -->
+  <a href="https://www.docker.com/">
+    <img src="https://img.shields.io/badge/Docker-20.10%2B-2496ED?logo=docker" alt="Docker" />
+  </a>
+  <!-- Azure -->
+  <a href="https://azure.microsoft.com/">
+    <img src="https://img.shields.io/badge/Azure-Cloud-0078D4?logo=microsoft-azure" alt="Azure" />
+  </a>
+</p>
 
-## ⏱️ Duración
-**3 horas** desde el momento del fork
+> **Documento principal de la solución.** Para detalles específicos revisa los README de cada directorio: [infrastructure](infrastructure/README.md), [k8s-manifests](k8s-manifests/README.md), [helm-chart](helm-chart/README.md) y [src](src/README.MD).
 
-## 🚀 Instrucciones para Comenzar
+> **[Ver enunciado o README.md original](README_original.MD)**
 
-### 1. Fork este repositorio
-- Haz fork de este repo en tu cuenta personal
-- Clona tu fork localmente
-- Crea una nueva rama para tu solución: `git checkout -b solucion-[tu-nombre]`
+---
 
-### 2. Estructura del Proyecto
+## Tabla de contenidos
+
+1. [Resumen ejecutivo](#resumen-ejecutivo)
+2. [Arquitectura de alto nivel](#arquitectura-de-alto-nivel)
+3. [Estructura del repositorio](#estructura-del-repositorio)
+4. [Prerrequisitos locales](#prerrequisitos-locales)
+5. [Ejecución local rápida](#ejecución-local-rápida)
+6. [Infraestructura con Terraform](#infraestructura-con-terraform)
+7. [Despliegue en Kubernetes (manifests)](#despliegue-en-kubernetes-manifests)
+8. [Helm chart](#helm-chart)
+9. [CI/CD y validaciones](#cicd-y-validaciones)
+10. [Variables, secretos y credenciales](#variables-secretos-y-credenciales)
+11. [Troubleshooting](#troubleshooting)
+12. [Enlaces útiles](#enlaces-útiles)
+
+---
+
+## Resumen ejecutivo
+
+La solución despliega una aplicación de e-commerce compuesta por frontend React, backend Node.js, base de datos PostgreSQL y caché Redis sobre Azure. La infraestructura se define con Terraform, el despliegue en AKS se puede realizar con manifiestos crudos o mediante un chart de Helm, y la automatización se apoya en scripts de validación y pipelines de CI/CD.
+
+---
+
+## Arquitectura de alto nivel
+
+- **Frontend**: React SPA servida por nginx (puerto 3000).
+- **Backend**: API Node.js/Express (puerto 8080) con endpoints de health y readiness.
+- **Base de datos**: Azure Database for PostgreSQL Flexible Server.
+- **Cache**: Redis con persistencia (Azure Disk en AKS).
+- **Networking**: AKS en VNet con subredes dedicadas; Application Gateway como entrada.
+- **Seguridad**: Azure Key Vault para secretos, Azure Workload Identity, NetworkPolicies y Pod Security Standards.
+
+---
+
+## Estructura del repositorio
+
 ```
 devops-technical-test/
-├── infrastructure/          # 🏗️  Terraform para Azure
-├── k8s-manifests/          # ☸️  Manifiestos Kubernetes  
-├── helm-chart/             # ⚙️  Helm Chart
-├── .github/workflows/      # 🔄 GitHub Actions CI/CD
-├── src/                    # 💻 Código aplicación (ejemplo)
-├── scripts/                # 🔧 Scripts de validación
-├── docs/                   # 📚 Documentación adicional
-└── README.md               # 📋 Este archivo
+├── README.md                 # Este archivo
+├── README_original.MD        # Enunciado original de la prueba
+├── infrastructure/           # Terraform para Azure
+├── k8s-manifests/            # Manifiestos Kubernetes organizados por componente
+├── helm-chart/               # Chart Helm parametrizable
+├── src/                      # Código de la aplicación (frontend y backend)
+└── scripts/                  # Scripts de validación
 ```
 
-### 3. Tareas a Completar
-Busca comentarios `# TODO:` en todos los archivos y complétalos siguiendo las especificaciones.
+---
 
-**Orden recomendado:**
-1. **Terraform** - Infraestructura Azure (35 min)
-2. **Kubernetes** - Manifiestos de aplicación (40 min)
-3. **Helm** - Chart parametrizable (30 min)
-4. **GitHub Actions** - Pipeline CI/CD (40 min)
-5. **Documentación** - README y arquitectura (25 min)
+## Prerrequisitos locales
 
-### 4. Validación Local
-Antes de enviar tu solución, ejecuta:
+Instala y verifica versiones mínimas:
+
 ```bash
-./scripts/validate-all.sh
+terraform version   # >= 1.0
+az version          # >= 2.50
+kubectl version     # >= 1.28
+helm version        # >= 3.12
+docker version      # >= 20.10
 ```
 
-### 5. Entrega
-- Haz commit de todos tus cambios
-- Push a tu rama de solución
-- Crea un Pull Request hacia el repo original
-- En la descripción del PR incluye:
-  - Decisiones arquitectónicas tomadas
-  - Supuestos realizados
-  - Posibles mejoras futuras
+Herramientas opcionales: `tfsec`, `kubeval`, `actionlint`.
 
 ---
 
-## 📋 Especificaciones Técnicas
 
-### Escenario
-Desplegar una **aplicación web de e-commerce** con:
-- **Frontend**: React app (puerto 3000)
-- **Backend API**: Node.js/Express (puerto 8080)
-- **Base de datos**: PostgreSQL (Azure Database)
-- **Cache**: Redis
-- **Storage**: Azure Files para uploads
-- **Monitoreo**: Azure Monitor + Application Insights
+## Infraestructura con Terraform
 
-### Requisitos de Infraestructura (Terraform)
-- Resource Group principal
-- Virtual Network con 3 subredes:
-  - AKS subnet (10.0.1.0/24)  
-  - Database subnet (10.0.2.0/24)
-  - Application Gateway subnet (10.0.3.0/24)
-- AKS cluster con:
-  - System node pool (2 nodos)
-  - User node pool (3 nodos, auto-scaling)
-- Azure Container Registry con integración AKS
-- Azure Key Vault para secretos
-- Azure Database for PostgreSQL Flexible Server
-- Application Gateway para ingress
-- Log Analytics Workspace
-- Network Security Groups con reglas apropiadas
+- Ubicación: `infrastructure/`
+- Define Resource Group, VNet/subredes, AKS (system y user node pools), ACR, PostgreSQL, Key Vault, Application Gateway, Log Analytics.
+- Variables en `variables.tf` (valores de ejemplo en `terraform.tfvars.example`).
+- Flujo recomendado:
+  1. `cd infrastructure`
+  2. `terraform init`
+  3. `terraform plan -out tfplan`
+  4. `terraform apply tfplan`
+  5. Crear recursos Service Principal en Azure.
 
-### Requisitos de Kubernetes
-- **Namespace**: `ecommerce-app`
-- **Frontend Deployment**:
-  - 3 réplicas
-  - Resource requests/limits
-  - Health checks (liveness, readiness, startup)
-  - Rolling update strategy
-- **Backend Deployment**:
-  - 2 réplicas iniciales
-  - HorizontalPodAutoscaler (CPU > 70%)
-  - Conexión a PostgreSQL y Redis
-  - Secrets desde Azure Key Vault
-- **Redis StatefulSet**:
-  - 1 réplica con persistent volume
-  - Azure Disk storage class
-- **Services**: ClusterIP para backend/redis, LoadBalancer para frontend
-- **Ingress**: Application Gateway con SSL termination
-- **NetworkPolicies**: Microsegmentación entre componentes
-- **PodDisruptionBudget**: Para alta disponibilidad
-- **ConfigMaps**: Configuración de aplicación por ambiente
-
-### Requisitos de Helm Chart
-- Chart.yaml con metadata completa
-- Values jerárquicos para dev/staging/prod
-- Templates con conditional logic
-- Helper functions en _helpers.tpl
-- Schema validation (values.schema.json)
-- Hooks pre/post-install para database setup
-- Tests automatizados de conectividad
-- NOTES.txt con instrucciones post-instalación
-
-### Requisitos de CI/CD (GitHub Actions)
-- **Triggers**: Push a main/develop, PR a main
-- **CI Pipeline**:
-  - Terraform validation y security scan
-  - Docker multi-arch build (AMD64/ARM64)
-  - Container security scanning
-  - Unit tests y code coverage
-  - Helm chart validation
-- **CD Pipeline**:
-  - Deploy automático a development (develop branch)
-  - Deploy manual a production (main branch)
-  - Blue-green deployment strategy
-  - Rollback automático en caso de health check failures
-- **Azure Integration**:
-  - OIDC authentication (sin secretos hardcoded)
-  - Push a Azure Container Registry
-  - Deploy a AKS usando Helm
-  - Notifications a Teams/Slack
+Outputs clave: nombre del ACR, kubeconfig, endpoint de base de datos, IP del Application Gateway.
 
 ---
 
-## ✅ Criterios de Evaluación
+## Despliegue con Terraform + Helm
 
-### Técnico (70%)
-| Componente | Peso | Criterios |
-|------------|------|-----------|
-| **Terraform** | 25% | Sintaxis, modularidad, seguridad, best practices Azure |
-| **Kubernetes** | 25% | Production-ready, security, resource management, integración Azure |
-| **Helm** | 20% | Structure, templating, parametrización, testing |
-| **CI/CD** | 20% | Pipeline completeness, security, error handling, Azure integration |
+1. Despliega la infraestructura:
+  ```bash
+  cd infrastructure
+  terraform init
+  terraform apply -auto-approve
+  ```
+  Espera a que termine y toma nota de la IP pública del Application Gateway (output `application_gateway_public_ip`).
 
-### Documentación (20%)
-- README comprehensivo
-- Decisiones arquitectónicas justificadas
-- Instrucciones claras de deployment
-- Troubleshooting guide
+2. Instala la app con Helm:
+  ```bash
+  helm upgrade --install ecommerce ./helm-chart \
+    -n ecommerce-app \
+    -f helm-chart/values-dev.yaml
+  ```
+O bien, fuerza algún cambio en el repositorio para activar le CI/CD en GitHub Actions.
 
-### Plus Points (10%)
-- Optimizaciones de costes
-- Monitoring y observability avanzada
-- Security hardening adicional
-- Performance tuning
-- Innovation y mejoras propuestas
+4. Conéctate al clúster de Kubernetes de Azure (AKS)
+Desde la raíz del repositorio haz:
+  ```bash
+   RG=$(terraform -chdir=infrastructure output -raw resource_group_name)
+   CLUSTER=$(terraform -chdir=infrastructure output -raw aks_cluster_name)
+   az aks get-credentials -g "$RG" -n "$CLUSTER" --overwrite-existing
+  ```
 
----
+5. Comprueba el estado del clúster en AKS:
+  ```bash
+   kubectl cluster-info
+   kubectl get nodes -o wide
+   kubectl get pods -A
+   # Comprobación de readiness detallada (salud del API server y componentes):
+   kubectl get --raw='/readyz?verbose'
+  ```
 
-## 🔧 Herramientas Necesarias
+5. Comprueba el servicio frontend:
+  ```bash
+  kubectl get svc -n ecommerce-app
+  # frontend-service debe tener EXTERNAL-IP = 10.0.1.100
+  ```
 
-Asegúrate de tener instalado localmente:
-```bash
-# Terraform
-terraform version  # >= 1.0
-
-# Azure CLI  
-az version         # >= 2.50
-
-# Kubernetes
-kubectl version    # >= 1.28
-
-# Helm
-helm version       # >= 3.12
-
-# Docker
-docker version     # >= 20.10
-
-# Linting tools (opcional pero recomendado)
-tfsec --version
-kubeval --version  
-actionlint --version
-```
+6. Accede a la app vía Application Gateway:
+  ```bash
+  curl http://<IP_PUBLICA_AGW>/
+  # O abre en navegador: http://<IP_PUBLICA_AGW>/
+  ```
 
 ---
 
-## 🆘 Troubleshooting
-
-### Problemas Comunes
-1. **Terraform validation fails**: Verifica sintaxis y providers
-2. **Kubernetes dry-run errors**: Revisa indentación YAML
-3. **Helm lint fails**: Valida templating syntax
-4. **GitHub Actions syntax**: Usa actionlint para validar
-
-### Scripts de Ayuda
-```bash
-# Validar todo de una vez
-./scripts/validate-all.sh
-
-# Validaciones individuales
-./scripts/validate-terraform.sh
-./scripts/validate-kubernetes.sh  
-./scripts/validate-helm.sh
-./scripts/validate-github-actions.sh
-
-# Auto-scoring (solo para referencia)
-./scripts/evaluate-submission.sh
-```
+### Notas importantes
+- El Application Gateway enruta el tráfico externo a la IP interna del frontend-service (Internal Load Balancer).
+- El Ingress de Kubernetes (manifiesto o Helm) debe estar presente para que AGIC configure el AGW.
+- No se expone ninguna IP pública de tipo LoadBalancer en AKS, solo la del AGW.
 
 ---
 
-## 📞 Soporte
+## Variables, secretos y credenciales
 
-Si tienes dudas sobre:
-- **Especificaciones técnicas**: Lee detenidamente los README
-- **Problemas de setup**: Ejecuta scripts de validación
-- **Interpretación de requisitos**: Usa tu mejor criterio y documenta decisiones
-
-**Recuerda**: Documenta tus supuestos y decisiones en el PR description.
+- **Terraform**: usa `terraform.tfvars` o variables de entorno `TF_VAR_` para valores sensibles (por ejemplo, contraseñas DB).
+- **Kubernetes**: secretos gestionados vía Key Vault + CSI (recomendado) o `secret.yaml` solo para desarrollo.
+- **Contenedores**: imágenes en ACR (`<acr>.azurecr.io/ecommerce-frontend` y `ecommerce-backend`).
+- **Autenticación**: preferir OIDC con GitHub Actions y Azure Workload Identity para acceso a Key Vault y ACR.
 
 ---
 
-## 🎉 ¡Buena Suerte!
+## Troubleshooting
 
-Esta prueba evalúa tanto conocimiento técnico como capacidad de resolución de problemas reales. 
-
-**Tips finales:**
-- Lee todos los TODOs antes de empezar
-- Prioriza funcionalidad antes que perfección
-- Documenta decisiones importantes
-- Testa tu solución con los scripts antes de enviar
-
-**Tiempo recomendado por sección:**
-- Terraform: 35 min
-- Kubernetes: 40 min  
-- Helm: 30 min
-- CI/CD: 40 min
-- Documentación: 25 min
-- Buffer: 10 min
+- **Terraform**: si falla `plan`, revisa credenciales Azure (`az account show`) y versiones de provider.
+- **kubectl dry-run**: ejecuta `kubectl apply -f k8s-manifests/ --dry-run=server` para detectar errores de esquema.
+- **Helm lint**: `helm lint ./helm-chart -f helm-chart/values-dev.yaml`.
+- **Imágenes**: valida acceso a ACR con `az acr login --name <ACR_NAME>` y `az acr repository list`.
+- **Health checks**: `curl http://<LB_IP>:8080/health` y `curl http://<LB_IP>:3000/health`.
