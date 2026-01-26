@@ -44,7 +44,7 @@ function App() {
         padding: '20px',
         marginBottom: '20px'
       }}>
-        <h1 style={{margin: 0}}>🛒 DevOps E-commerce Test</h1>
+        <h1 style={{margin: 0}}>🛒 DevOps E-commerce Test - Evaristo GZ</h1>
         <div style={{marginTop: '10px', fontSize: '14px'}}>
           Status: <span style={{
             color: health === 'healthy' ? '#2ecc71' : '#e74c3c'
